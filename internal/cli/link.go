@@ -125,12 +125,15 @@ func pick(w io.Writer, in *bufio.Scanner, email string, sums []accounts.Summary,
 			mark = "  · most recently active"
 		}
 		fmt.Fprintf(w, "  %d) %s  %s  %s%s\n", i+1, short(s.ID), label, plural(s.Chats, "chat"), mark)
-		if len(s.Recent) > 0 {
+		switch {
+		case s.Own == 0 && s.Chats > 0:
+			fmt.Fprintln(w, "     every chat here is also in another account")
+		case len(s.Recent) > 0:
 			quoted := make([]string, len(s.Recent))
 			for j, t := range s.Recent {
 				quoted[j] = strconv.Quote(t)
 			}
-			fmt.Fprintf(w, "     %s\n", strings.Join(quoted, ", "))
+			fmt.Fprintf(w, "     only here: %s\n", strings.Join(quoted, ", "))
 		}
 	}
 	for {

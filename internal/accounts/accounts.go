@@ -18,7 +18,8 @@ type Summary struct {
 	ID         string
 	Email      string   // known email, or "" if none was found on this Mac
 	Chats      int      // distinct chats
-	Recent     []string // up to 3 most recent chat titles
+	Own        int      // chats that exist only in this account
+	Recent     []string // up to 3 most recent chat titles, among this account's own chats
 	LastActive time.Time
 }
 
@@ -47,18 +48,29 @@ func Summarize(p paths.Paths) ([]Summary, error) {
 			}
 		}
 	}
+	// A chat id seen in more than one account isn't "own" to any of them: v0.1.0
+	// already synced it, so it can't help tell two already-synced accounts apart.
+	seenIn := map[string]int{}
+	for _, chats := range byAccount {
+		for id := range chats {
+			seenIn[id]++
+		}
+	}
+
 	sums := make([]Summary, 0, len(byAccount))
 	for account, chats := range byAccount {
-		list := make([]chat, 0, len(chats))
-		for _, c := range chats {
-			list = append(list, c)
+		var own []chat
+		for id, c := range chats {
+			if seenIn[id] == 1 {
+				own = append(own, c)
+			}
 		}
-		sort.Slice(list, func(i, j int) bool { return list[i].at.After(list[j].at) })
-		s := Summary{ID: account, Email: known[account], Chats: len(list)}
-		if len(list) > 0 {
-			s.LastActive = list[0].at
+		sort.Slice(own, func(i, j int) bool { return own[i].at.After(own[j].at) })
+		s := Summary{ID: account, Email: known[account], Chats: len(chats), Own: len(own)}
+		if len(own) > 0 {
+			s.LastActive = own[0].at
 		}
-		for _, c := range list {
+		for _, c := range own {
 			if len(s.Recent) == 3 {
 				break
 			}

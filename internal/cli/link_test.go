@@ -46,7 +46,7 @@ func TestLinkProposesAKnownEmail(t *testing.T) {
 	if err != nil {
 		t.Fatalf("%v\n%s", err, out)
 	}
-	expectAll(t, out, "Found a@x.com", "Which account is b@y.com?", `"beta"`, "sends that conversation")
+	expectAll(t, out, "Found a@x.com", "Which account is b@y.com?", "only here:", `"beta"`, "sends that conversation")
 	l, err := links.Load(p.Links())
 	if err != nil {
 		t.Fatal(err)
