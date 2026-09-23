@@ -33,7 +33,7 @@ func newRootCommand() *cobra.Command {
 		Version: build.String(),
 		Long: "ccdejavu keeps the Claude desktop app's Code tab and Cowork chats in sync\n" +
 			"across every Claude account signed in on this Mac, so switching accounts\n" +
-			"doesn't hide your chats. Chats only sync between accounts in the same org.",
+			"doesn't hide your chats. Nothing syncs until you link accounts with `ccdejavu link`.",
 		SilenceUsage: true,
 	}
 	root.PersistentFlags().StringVar(&g.logLevel, "log-level", "info", "log verbosity: debug, info, warn, error")

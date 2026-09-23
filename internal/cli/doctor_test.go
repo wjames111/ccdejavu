@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -49,6 +50,23 @@ func TestDoctorFailsLinkedAccountsCheckWithoutLinks(t *testing.T) {
 		t.Fatal("doctor passed with accounts but no links")
 	}
 	expectAll(t, out, "FAIL linked accounts: none yet; run: ccdejavu link <email> <email>")
+}
+
+func TestDoctorFailsWhenLinkedGroupsCantBeBuilt(t *testing.T) {
+	t.Parallel()
+	home := codeHome(t, testtree.ChatJSON(testtree.Chat1, "one"))
+	p := paths.Paths{Home: home}
+	acctDir := filepath.Join(p.CodeRoot(), testtree.AcctA)
+	if err := os.Chmod(acctDir, 0); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.Chmod(acctDir, 0o700) })
+
+	out, err := runCLI(t, "--home", home, "doctor")
+	if err == nil {
+		t.Fatal("doctor passed with unreadable account folders")
+	}
+	expectAll(t, out, "FAIL linked groups")
 }
 
 func TestDoctorReportsAMissingBinary(t *testing.T) {

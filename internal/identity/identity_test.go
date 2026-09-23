@@ -17,7 +17,7 @@ func oauth(id, email string) string {
 func TestKnownReadsCoworkChatsAndCLIConfig(t *testing.T) {
 	t.Parallel()
 	p := paths.Paths{Home: t.TempDir()}
-	// A's pair sits in B's folder (a copied chat): it's keyed by the ID inside, not the folder.
+	// A's pair sits in B's folder: keyed by the ID inside, wherever the file sits.
 	testtree.Write(t, filepath.Join(p.CoworkRoot(), testtree.AcctB, testtree.Org, "local_"+testtree.Chat1, ".claude", ".claude.json"), oauth(testtree.AcctA, "A@x.com"), testtree.T0)
 	testtree.Write(t, p.ClaudeConfig(), oauth(testtree.AcctB, "b@y.com"), testtree.T0)
 	testtree.Write(t, filepath.Join(p.CoworkRoot(), testtree.AcctA, testtree.Org, "local_"+testtree.Chat2, ".claude", ".claude.json"), "not json", testtree.T0)

@@ -67,12 +67,14 @@ func runChecks(ctx context.Context, p paths.Paths) []check {
 	checks = append(checks, check{"linked accounts", linkedErr})
 
 	if linksErr == nil {
-		if groups, err := layout.Groups(roots, l.Sets()); err == nil {
-			for _, grp := range groups {
-				if grp.Syncable() {
-					name := fmt.Sprintf("%s · %s layout", grp.Root.Name, grp.Name)
-					checks = append(checks, check{name, layout.Validate(grp)})
-				}
+		groups, err := layout.Groups(roots, l.Sets())
+		if err != nil {
+			checks = append(checks, check{"linked groups", err})
+		}
+		for _, grp := range groups {
+			if grp.Syncable() {
+				name := fmt.Sprintf("%s · %s layout", grp.Root.Name, grp.Name)
+				checks = append(checks, check{name, layout.Validate(grp)})
 			}
 		}
 	}

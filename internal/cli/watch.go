@@ -74,13 +74,13 @@ func (s *syncLog) report(groups []state.Group) {
 		wasSkipped := s.last[key] != ""
 		switch {
 		case grp.Skipped != "" && grp.Skipped != s.last[key]:
-			s.log.Warn("skipped", "root", grp.Root, "org", short(grp.Name), "reason", s.p.Brief(grp.Skipped))
+			s.log.Warn("skipped", "root", grp.Root, "group", grp.Name, "reason", s.p.Brief(grp.Skipped))
 		case grp.Skipped != "":
-			s.log.Debug("still skipped", "root", grp.Root, "org", short(grp.Name), "reason", s.p.Brief(grp.Skipped))
+			s.log.Debug("still skipped", "root", grp.Root, "group", grp.Name, "reason", s.p.Brief(grp.Skipped))
 		case wasSkipped:
-			s.log.Info("recovered", "root", grp.Root, "org", short(grp.Name))
+			s.log.Info("recovered", "root", grp.Root, "group", grp.Name)
 		case grp.Actions > 0:
-			s.log.Info("synced", "root", grp.Root, "org", short(grp.Name), "changes", grp.Actions)
+			s.log.Info("synced", "root", grp.Root, "group", grp.Name, "changes", grp.Actions)
 		}
 		s.last[key] = grp.Skipped
 	}

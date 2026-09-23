@@ -33,6 +33,9 @@ type Links struct {
 // Link joins a and b, adding one to the other's group or merging two groups.
 func (l *Links) Link(a, b Account) error {
 	a.Email, b.Email = normal(a.Email), normal(b.Email)
+	if a.Email == "" || b.Email == "" {
+		return errors.New("an email is required")
+	}
 	if a.ID == b.ID {
 		return errors.New("pick two different accounts")
 	}
@@ -97,6 +100,9 @@ func (l *Links) Unlink(email string) bool {
 	return false
 }
 
+// Has reports whether an account ID belongs to any linked group.
+func (l *Links) Has(id string) bool { return l.find(id) >= 0 }
+
 // EmailFor returns the linked email for an account ID, or "" if it isn't linked.
 func (l *Links) EmailFor(id string) string {
 	for _, g := range l.Groups {
@@ -121,6 +127,24 @@ func Load(path string) (Links, error) {
 	}
 	if err := json.Unmarshal(raw, &l); err != nil {
 		return l, fmt.Errorf("reading %s: %w", path, err)
+	}
+	seenIDs, seenEmails := map[string]bool{}, map[string]bool{}
+	for _, g := range l.Groups {
+		for i, a := range g.Accounts {
+			g.Accounts[i].Email = normal(a.Email)
+			a = g.Accounts[i]
+			if !layout.IsUUID(a.ID) {
+				return l, fmt.Errorf("%s: %q isn't a valid account id", path, a.ID)
+			}
+			if seenIDs[a.ID] {
+				return l, fmt.Errorf("%s: account %s is linked more than once", path, short(a.ID))
+			}
+			seenIDs[a.ID] = true
+			if seenEmails[a.Email] {
+				return l, fmt.Errorf("%s: %s is linked more than once", path, a.Email)
+			}
+			seenEmails[a.Email] = true
+		}
 	}
 	return l, nil
 }

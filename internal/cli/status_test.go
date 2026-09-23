@@ -48,7 +48,7 @@ func TestGroupResult(t *testing.T) {
 			name: "only one account",
 			grp:  layout.Group{Root: grp.Root, Name: testtree.Org, Members: []string{memberA}},
 			st:   state.State{},
-			want: "only one account here, nothing to sync",
+			want: "only one folder here, nothing to sync",
 		},
 		{
 			name: "no record",
@@ -70,7 +70,7 @@ func TestGroupResult(t *testing.T) {
 			st: state.State{Groups: []state.Group{
 				{Root: "code", Name: testtree.Org, Members: []string{memberA}, Actions: 2},
 			}},
-			hasWant: "a folder was added",
+			hasWant: "the folders changed",
 		},
 		{
 			name: "skipped, no actions",

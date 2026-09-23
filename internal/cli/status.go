@@ -88,7 +88,7 @@ func notLinked(p paths.Paths, roots []layout.Root, l links.Links) (string, error
 			return "", err
 		}
 		for a := range folders {
-			if l.EmailFor(a) == "" {
+			if !l.Has(a) {
 				found[a] = true
 			}
 		}
@@ -139,7 +139,7 @@ func jobState(ctx context.Context, p paths.Paths) string {
 
 func groupResult(p paths.Paths, grp layout.Group, st state.State) string {
 	if !grp.Syncable() {
-		return "only one account here, nothing to sync"
+		return "only one folder here, nothing to sync"
 	}
 	for _, r := range st.Groups {
 		if r.Root == grp.Root.Name && slices.Equal(r.Members, grp.Members) {
@@ -152,7 +152,7 @@ func groupResult(p paths.Paths, grp layout.Group, st state.State) string {
 			return fmt.Sprintf("in sync (last sync made %s)", plural(r.Actions, "change"))
 		}
 		if r.Root == grp.Root.Name && r.Name == grp.Name {
-			return "a folder was added since the last sync; it syncs on the next pass"
+			return "the folders changed since the last sync; it syncs on the next pass"
 		}
 	}
 	return "not synced yet"

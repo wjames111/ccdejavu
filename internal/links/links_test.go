@@ -1,6 +1,7 @@
 package links_test
 
 import (
+	"os"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -66,6 +67,17 @@ func TestLinkAlreadyLinkedIsANoOp(t *testing.T) {
 	}
 }
 
+func TestLinkRejectsAnEmptyEmail(t *testing.T) {
+	t.Parallel()
+	var l links.Links
+	if err := l.Link(acct("", idA), acct("b@y.com", idB)); err == nil || !strings.Contains(err.Error(), "an email is required") {
+		t.Errorf("err = %v", err)
+	}
+	if err := l.Link(acct("a@x.com", idA), acct("   ", idB)); err == nil || !strings.Contains(err.Error(), "an email is required") {
+		t.Errorf("err = %v", err)
+	}
+}
+
 func TestLinkRejectsConflicts(t *testing.T) {
 	t.Parallel()
 	var l links.Links
@@ -114,6 +126,20 @@ func TestEmailFor(t *testing.T) {
 	}
 }
 
+func TestHas(t *testing.T) {
+	t.Parallel()
+	var l links.Links
+	if err := l.Link(acct("a@x.com", idA), acct("b@y.com", idB)); err != nil {
+		t.Fatal(err)
+	}
+	if !l.Has(idA) || !l.Has(idB) {
+		t.Errorf("Has = %v, %v, want both true", l.Has(idA), l.Has(idB))
+	}
+	if l.Has(idC) {
+		t.Error("Has(idC) = true, want false")
+	}
+}
+
 func TestSets(t *testing.T) {
 	t.Parallel()
 	var l links.Links
@@ -126,6 +152,51 @@ func TestSets(t *testing.T) {
 	}
 	if !slices.Contains(sets[0].Accounts, idA) || !slices.Contains(sets[0].Accounts, idB) {
 		t.Fatalf("accounts = %v, want both ids", sets[0].Accounts)
+	}
+}
+
+func writeBadFile(t *testing.T, body string) string {
+	t.Helper()
+	path := filepath.Join(t.TempDir(), "links.json")
+	if err := os.WriteFile(path, []byte(body), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	return path
+}
+
+func TestLoadNormalizesEmails(t *testing.T) {
+	t.Parallel()
+	path := writeBadFile(t, `{"groups":[{"accounts":[{"email":" A@X.com ","id":"`+idA+`"},{"email":"B@Y.COM","id":"`+idB+`"}]}]}`)
+	l, err := links.Load(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if emails(l.Groups[0]) != "a@x.com,b@y.com" {
+		t.Errorf("got %+v", l.Groups)
+	}
+}
+
+func TestLoadRejectsADuplicateID(t *testing.T) {
+	t.Parallel()
+	path := writeBadFile(t, `{"groups":[{"accounts":[{"email":"a@x.com","id":"`+idA+`"},{"email":"b@y.com","id":"`+idA+`"}]}]}`)
+	if _, err := links.Load(path); err == nil || !strings.Contains(err.Error(), path) {
+		t.Errorf("err = %v, want it to mention %s", err, path)
+	}
+}
+
+func TestLoadRejectsADuplicateEmail(t *testing.T) {
+	t.Parallel()
+	path := writeBadFile(t, `{"groups":[{"accounts":[{"email":"a@x.com","id":"`+idA+`"}]},{"accounts":[{"email":"a@x.com","id":"`+idB+`"}]}]}`)
+	if _, err := links.Load(path); err == nil || !strings.Contains(err.Error(), path) {
+		t.Errorf("err = %v, want it to mention %s", err, path)
+	}
+}
+
+func TestLoadRejectsANonUUIDAccountID(t *testing.T) {
+	t.Parallel()
+	path := writeBadFile(t, `{"groups":[{"accounts":[{"email":"a@x.com","id":"not-a-uuid"}]}]}`)
+	if _, err := links.Load(path); err == nil || !strings.Contains(err.Error(), path) {
+		t.Errorf("err = %v, want it to mention %s", err, path)
 	}
 }
 
