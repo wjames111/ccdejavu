@@ -46,6 +46,8 @@ func newRootCommand() *cobra.Command {
 		newWatchCommand(g),
 		newStatusCommand(g),
 		newDoctorCommand(g),
+		newLinkCommand(g),
+		newUnlinkCommand(g),
 	)
 	return root
 }
