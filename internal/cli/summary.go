@@ -4,9 +4,17 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/wjames111/ccdejavu/internal/links"
 	"github.com/wjames111/ccdejavu/internal/paths"
 	"github.com/wjames111/ccdejavu/internal/state"
 )
+
+// printIfNothingLinked prints a hint when there's nothing to sync yet.
+func printIfNothingLinked(w io.Writer, l links.Links) {
+	if len(l.Groups) == 0 {
+		fmt.Fprintln(w, "No accounts are linked yet, so nothing synced. Run: ccdejavu link <email> <email>")
+	}
+}
 
 // printSummary prints one line per group that has more than one account.
 func printSummary(w io.Writer, p paths.Paths, st state.State, dryRun bool) {

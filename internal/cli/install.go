@@ -43,9 +43,7 @@ func newInstallCommand(g *globals) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			if len(l.Groups) == 0 {
-				fmt.Fprintln(w, "No accounts are linked yet, so nothing synced. Run: ccdejavu link <email> <email>")
-			}
+			printIfNothingLinked(w, l)
 			if err := launchd.Install(cmd.Context(), p, bin); err != nil {
 				return fmt.Errorf("chats synced, but the background job didn't start: %w", err)
 			}

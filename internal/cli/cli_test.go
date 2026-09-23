@@ -76,6 +76,20 @@ func TestSyncThenStatus(t *testing.T) {
 	}
 }
 
+func TestSyncWithNothingLinkedSaysSo(t *testing.T) {
+	t.Parallel()
+	for _, args := range [][]string{
+		{"sync"},
+		{"sync", "--dry-run"},
+	} {
+		out, err := runCLI(t, append([]string{"--home", t.TempDir()}, args...)...)
+		if err != nil {
+			t.Fatalf("%v: %v\n%s", args, err, out)
+		}
+		expectAll(t, out, "No accounts are linked yet, so nothing synced. Run: ccdejavu link <email> <email>")
+	}
+}
+
 func TestStatusBeforeAnySync(t *testing.T) {
 	t.Parallel()
 	out, err := runCLI(t, "--home", t.TempDir(), "status")

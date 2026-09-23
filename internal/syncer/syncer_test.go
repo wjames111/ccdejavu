@@ -302,6 +302,58 @@ func TestBacksUpAgainWhenAnAccountJoinsAnExistingGroup(t *testing.T) {
 	}
 }
 
+func TestUnlinkingDoesNotTriggerAnotherBackup(t *testing.T) {
+	t.Parallel()
+	p := paths.Paths{Home: t.TempDir()}
+	acctC := "cccccccc-0000-4000-8000-00000000000c"
+	testtree.Write(t, orgFile(p.CodeRoot(), testtree.AcctA, chatName(testtree.Chat1)), testtree.ChatJSON(testtree.Chat1, "one"), testtree.T0)
+	testtree.Mkdir(t, filepath.Join(p.CodeRoot(), testtree.AcctB, testtree.Org))
+	testtree.Mkdir(t, filepath.Join(p.CodeRoot(), acctC, testtree.Org))
+	testtree.Link(t, p.Links(), testtree.AcctA, testtree.AcctB, acctC)
+	run(t, p, false)
+	first, err := os.ReadDir(p.Backups())
+	if err != nil || len(first) != 1 {
+		t.Fatalf("first backup = %v, %v; want exactly one", first, err)
+	}
+
+	testtree.Link(t, p.Links(), testtree.AcctA, testtree.AcctB) // relink, dropping C
+
+	st, err := syncer.Run(syncer.Options{Paths: p, Out: &bytes.Buffer{}, Now: func() time.Time { return testtree.T0.Add(time.Hour) }})
+	if err != nil {
+		t.Fatal(err)
+	}
+	second, err := os.ReadDir(p.Backups())
+	if err != nil || len(second) != 1 {
+		t.Errorf("backups after unlinking C = %v, %v; want still one", second, err)
+	}
+	wantBackup := filepath.Join(p.Backups(), "20260901-120000")
+	if st.Backup != wantBackup {
+		t.Errorf("Backup = %q, want %q (no new backup should have been taken)", st.Backup, wantBackup)
+	}
+}
+
+func TestUpgradingFromAnOldStateFileBacksUpAgain(t *testing.T) {
+	t.Parallel()
+	p := paths.Paths{Home: t.TempDir()}
+	testtree.Write(t, orgFile(p.CodeRoot(), testtree.AcctA, chatName(testtree.Chat1)), testtree.ChatJSON(testtree.Chat1, "one"), testtree.T0)
+	testtree.Mkdir(t, filepath.Join(p.CodeRoot(), testtree.AcctB, testtree.Org))
+	testtree.Link(t, p.Links(), testtree.AcctA, testtree.AcctB)
+	old := `{"backup":"/old/backup","lastSync":"2026-09-01T12:00:00Z","groups":[{"root":"code","org":"` +
+		testtree.Org + `","accounts":["` + testtree.AcctA + `","` + testtree.AcctB + `"],"actions":0}]}`
+	testtree.Write(t, p.State(), old, testtree.T0)
+
+	st, _ := run(t, p, false)
+
+	entries, err := os.ReadDir(p.Backups())
+	if err != nil || len(entries) != 1 {
+		t.Fatalf("backups = %v, %v; want exactly one new backup", entries, err)
+	}
+	want := filepath.Join(p.Backups(), entries[0].Name())
+	if st.Backup != want {
+		t.Errorf("Backup = %q, want %q", st.Backup, want)
+	}
+}
+
 func TestLeavesOtherFilesAlone(t *testing.T) {
 	t.Parallel()
 	p := newHome(t)

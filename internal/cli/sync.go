@@ -5,6 +5,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/wjames111/ccdejavu/internal/links"
 	"github.com/wjames111/ccdejavu/internal/syncer"
 )
 
@@ -25,6 +26,11 @@ func newSyncCommand(g *globals) *cobra.Command {
 				return err
 			}
 			printSummary(w, p, st, dryRun)
+			l, err := links.Load(p.Links())
+			if err != nil {
+				return err
+			}
+			printIfNothingLinked(w, l)
 			return nil
 		},
 	}

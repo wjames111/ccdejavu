@@ -37,7 +37,7 @@ func (p Paths) CoworkRoot() string {
 // Data is ccdejavu's own folder.
 func (p Paths) Data() string { return filepath.Join(p.Home, ".ccdejavu") }
 
-// Backups holds the first-run backup.
+// Backups holds the backup taken before a linked group's first sync.
 func (p Paths) Backups() string { return filepath.Join(p.Data(), "backups") }
 
 // Trash holds chats removed because another account deleted them.

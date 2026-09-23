@@ -1,5 +1,5 @@
-// Package syncer runs one full sync: back up on the first run, then validate,
-// plan, and apply every group, and record what happened.
+// Package syncer runs one full sync: back up before a linked group's first
+// sync, then validate, plan, and apply every group, and record what happened.
 package syncer
 
 import (
@@ -28,8 +28,8 @@ type Options struct {
 }
 
 // Run syncs every group once. A group that fails validation or apply is
-// recorded as skipped and the rest still sync. A failed first-run backup
-// stops everything.
+// recorded as skipped and the rest still sync. A failed backup before a
+// linked group's first sync stops everything.
 func Run(opts Options) (state.State, error) {
 	p := opts.Paths
 	roots := layout.Roots(p)
@@ -67,7 +67,7 @@ func Run(opts Options) (state.State, error) {
 		} else {
 			fmt.Fprintf(opts.Out, "Backing up both folders to %s first (this can take a minute)\n", dest)
 			if err := takeBackup(roots, dest); err != nil {
-				return st, fmt.Errorf("first-run backup failed, nothing was synced: %w", err)
+				return st, fmt.Errorf("backup failed, nothing was synced: %w", err)
 			}
 			st.Backup = dest
 			if err := state.Save(p.State(), st); err != nil {
@@ -119,11 +119,23 @@ func syncGroup(g layout.Group, trashRoot string, opts Options) (int, error) {
 	return done, nil
 }
 
-// recorded reports whether g's exact member set was already recorded in a previous run.
+// recorded reports whether g's members were already covered by a previous run's group with
+// the same root, so unlinking (which shrinks a group) doesn't trigger another backup, but
+// linking (which adds folders) still does.
 func recorded(st state.State, g layout.Group) bool {
 	return slices.ContainsFunc(st.Groups, func(r state.Group) bool {
-		return r.Root == g.Root.Name && slices.Equal(r.Members, g.Members)
+		return r.Root == g.Root.Name && isSubset(g.Members, r.Members)
 	})
+}
+
+// isSubset reports whether every member of a is also in b.
+func isSubset(a, b []string) bool {
+	for _, m := range a {
+		if !slices.Contains(b, m) {
+			return false
+		}
+	}
+	return true
 }
 
 // takeBackup renames the copy into place only when it's complete, so a failed backup never looks real.
