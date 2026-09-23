@@ -28,7 +28,7 @@ type chat struct {
 	at    time.Time
 }
 
-// Summarize lists every account in either root, most recently active first.
+// Summarize lists every account in either root, ordered by the newest chat only it has.
 func Summarize(p paths.Paths) ([]Summary, error) {
 	known := identity.Known(p)
 	byAccount := map[string]map[string]chat{}

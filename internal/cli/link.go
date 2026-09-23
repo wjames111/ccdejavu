@@ -120,11 +120,7 @@ func pick(w io.Writer, in *bufio.Scanner, email string, sums []accounts.Summary,
 		if label == "" {
 			label = "email not found on this Mac"
 		}
-		mark := ""
-		if s.ID == sums[0].ID && !s.LastActive.IsZero() {
-			mark = "  · most recently active"
-		}
-		fmt.Fprintf(w, "  %d) %s  %s  %s%s\n", i+1, short(s.ID), label, plural(s.Chats, "chat"), mark)
+		fmt.Fprintf(w, "  %d) %s  %s  %s\n", i+1, short(s.ID), label, plural(s.Chats, "chat"))
 		switch {
 		case s.Own == 0 && s.Chats > 0:
 			fmt.Fprintln(w, "     every chat here is also in another account")

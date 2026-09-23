@@ -20,7 +20,7 @@ macOS only.
 Run `ccdejavu link <email> <email>` and answer its questions. The app doesn't store emails where ccdejavu can read them, so it asks you to help match each email to an account on this Mac:
 
 - If ccdejavu already knows an account's email, from a Cowork chat or from the Claude Code CLI's own settings, it proposes that account and asks you to confirm.
-- Otherwise it lists the candidate accounts by chat count and their most recent chat titles, so you can tell them apart. The account with the newest chat activity is marked "most recently active".
+- Otherwise it lists the candidate accounts with their chat counts and their most recent chats that exist only in that account, so you can tell them apart. If two accounts already share every chat, it says so.
 
 For example:
 
@@ -31,8 +31,8 @@ Found you@work.com (c4ed0833, 181 chats).
 Use it? [Y/n] y
 
 Which account is you@home.com?
-  1) 2a0c2d48  email not found on this Mac  83 chats  · most recently active
-     "Trip planning", "Budget spreadsheet", "Birthday ideas"
+  1) 2a0c2d48  email not found on this Mac  83 chats
+     only here: "Trip planning", "Budget spreadsheet", "Birthday ideas"
 > 1
 
 Linked accounts share one chat list. Continuing a chat under the other account sends that conversation to that account.
