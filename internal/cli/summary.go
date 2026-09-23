@@ -16,7 +16,7 @@ func printIfNothingLinked(w io.Writer, l links.Links) {
 	}
 }
 
-// printSummary prints one line per group that has more than one account.
+// printSummary prints one line per group that has more than one folder.
 func printSummary(w io.Writer, p paths.Paths, st state.State, dryRun bool) {
 	noun := "change"
 	if dryRun {

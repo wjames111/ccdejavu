@@ -27,11 +27,11 @@ For example:
 ```
 $ ccdejavu link you@work.com you@home.com
 
-Found you@work.com (c4ed0833, 181 chats).
+Found you@work.com (3f1a9c2e, 181 chats).
 Use it? [Y/n] y
 
 Which account is you@home.com?
-  1) 2a0c2d48  email not found on this Mac  83 chats
+  1) 7b40d8e1  email not found on this Mac  83 chats
      only here: "Trip planning", "Budget spreadsheet", "Birthday ideas"
 > 1
 
@@ -76,7 +76,7 @@ Linked accounts share one combined chat list across all their orgs: every org fo
 
 ## Safety
 
-- The first sync backs up both folders to `~/.ccdejavu/backups/` before changing anything. If the backup fails, nothing syncs.
+- The first sync backs up both folders to `~/.ccdejavu/backups/` before changing anything. A backup is also taken before the first sync of newly linked accounts. If the backup fails, nothing syncs.
 - Every copy goes to a temp file first and is then renamed into place, so the app never reads half a chat.
 - Before syncing a folder, ccdejavu checks every chat file in it. If anything looks unfamiliar, that folder is skipped and `ccdejavu status` says why.
 - ccdejavu never empties its trash. Delete `~/.ccdejavu/trash/` yourself once you're sure.
@@ -97,6 +97,8 @@ brew upgrade ccdejavu
 Or, if you installed with Go: `go install github.com/wjames111/ccdejavu/cmd/ccdejavu@latest`
 
 Then run `ccdejavu install` again. Re-running it matters: the background job records the binary's full path, so it needs to point at the new one. `ccdejavu doctor` warns if the job is running an old version.
+
+Since 0.2.0, nothing syncs until you link accounts. If you're upgrading from an older version, run `ccdejavu link <email> <email>` first, then `ccdejavu install`.
 
 ## Development
 

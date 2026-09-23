@@ -104,7 +104,7 @@ func TestAccountFoldersMissingRootIsEmpty(t *testing.T) {
 	}
 }
 
-func TestDiscoverIgnoresSymlinksAndUppercase(t *testing.T) {
+func TestAccountFoldersIgnoreSymlinksAndUppercase(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()
 	real := filepath.Join(t.TempDir(), "real")
