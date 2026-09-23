@@ -49,6 +49,9 @@ func (p Paths) State() string { return filepath.Join(p.Data(), "state.json") }
 // Lock keeps a manual sync and the watcher from running at once.
 func (p Paths) Lock() string { return filepath.Join(p.Data(), "lock") }
 
+// Links records which accounts the user chose to keep in sync.
+func (p Paths) Links() string { return filepath.Join(p.Data(), "links.json") }
+
 // Logs is where launchd writes the watcher's output.
 func (p Paths) Logs() string { return filepath.Join(p.Home, "Library", "Logs", "ccdejavu") }
 
