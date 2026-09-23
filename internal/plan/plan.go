@@ -54,7 +54,7 @@ type file struct {
 	mtime time.Time
 }
 
-// snapshot maps chat id -> account -> what that account has.
+// snapshot maps chat id -> member -> what that member has.
 type snapshot struct {
 	chats    map[string]map[string]file
 	chatDirs map[string]map[string]string
@@ -75,16 +75,16 @@ func Build(g layout.Group, trashRoot string) ([]Action, error) {
 		if s.blocked[id] {
 			continue
 		}
-		marker := first(g.Accounts, have)
-		for _, a := range g.Accounts {
-			if _, ok := have[a]; !ok {
-				actions = append(actions, Action{Op: Copy, Src: marker, Dst: filepath.Join(g.OrgDir(a), "deleted_"+id)})
+		marker := first(g.Members, have)
+		for _, m := range g.Members {
+			if _, ok := have[m]; !ok {
+				actions = append(actions, Action{Op: Copy, Src: marker, Dst: filepath.Join(g.Dir(m), "deleted_"+id)})
 			}
-			if f, ok := s.chats[id][a]; ok {
-				actions = append(actions, Action{Op: Trash, Src: f.path, Dst: trashPath(g, trashRoot, a, f.path)})
+			if f, ok := s.chats[id][m]; ok {
+				actions = append(actions, Action{Op: Trash, Src: f.path, Dst: trashPath(g, trashRoot, m, f.path)})
 			}
-			if d, ok := s.chatDirs[id][a]; ok {
-				actions = append(actions, Action{Op: Trash, Src: d, Dst: trashPath(g, trashRoot, a, d)})
+			if d, ok := s.chatDirs[id][m]; ok {
+				actions = append(actions, Action{Op: Trash, Src: d, Dst: trashPath(g, trashRoot, m, d)})
 			}
 		}
 	}
@@ -97,8 +97,8 @@ func Build(g layout.Group, trashRoot string) ([]Action, error) {
 			continue
 		}
 		name := "local_" + id + ".json"
-		actions = append(actions, newestWins(g, have, func(a string) string {
-			return filepath.Join(g.OrgDir(a), name)
+		actions = append(actions, newestWins(g, have, func(m string) string {
+			return filepath.Join(g.Dir(m), name)
 		})...)
 	}
 
@@ -132,8 +132,8 @@ func scan(g layout.Group) (snapshot, error) {
 		markers:  map[string]map[string]string{},
 		blocked:  map[string]bool{},
 	}
-	for _, a := range g.Accounts {
-		dir := g.OrgDir(a)
+	for _, m := range g.Members {
+		dir := g.Dir(m)
 		entries, err := os.ReadDir(dir)
 		if err != nil {
 			return s, err
@@ -154,15 +154,15 @@ func scan(g layout.Group) (snapshot, error) {
 					s.blocked[id] = true
 					continue
 				}
-				put(s.chats, id, a, file{path: path, mtime: info.ModTime()})
+				put(s.chats, id, m, file{path: path, mtime: info.ModTime()})
 			case layout.ChatDir:
-				put(s.chatDirs, id, a, path)
+				put(s.chatDirs, id, m, path)
 			case layout.Marker:
 				if !e.Type().IsRegular() {
 					s.blocked[id] = true
 					continue
 				}
-				put(s.markers, id, a, path)
+				put(s.markers, id, m, path)
 			case layout.Other:
 				// A chat's name on the wrong kind of entry (a symlink, or a file where a folder belongs) would send writes astray.
 				if k, odd := layout.Classify(e.Name(), !e.IsDir(), g.Root.ChatDirs); k != layout.Other {
@@ -177,13 +177,13 @@ func scan(g layout.Group) (snapshot, error) {
 // errUnexpected stops a chat folder walk that found something other than files and folders.
 var errUnexpected = errors.New("unexpected entry in chat folder")
 
-// planChatDir merges one Cowork chat folder across accounts, file by file.
+// planChatDir merges one Cowork chat folder across member folders, file by file.
 // Files are never removed from a chat folder here; only a delete marker does that.
 // A folder holding anything unexpected is left alone rather than half-synced.
 func planChatDir(g layout.Group, id string, have map[string]string) ([]Action, error) {
-	files := map[string]map[string]file{} // relative path -> account -> file
-	dirs := map[string]map[string]bool{}  // relative path -> account -> present
-	for a, root := range have {
+	files := map[string]map[string]file{} // relative path -> member -> file
+	dirs := map[string]map[string]bool{}  // relative path -> member -> present
+	for m, root := range have {
 		err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 			if errors.Is(err, fs.ErrNotExist) {
 				return nil
@@ -203,7 +203,7 @@ func planChatDir(g layout.Group, id string, have map[string]string) ([]Action, e
 			}
 			switch {
 			case d.IsDir():
-				put(dirs, rel, a, true)
+				put(dirs, rel, m, true)
 			case d.Type().IsRegular():
 				if isTemp(d.Name()) {
 					return nil
@@ -215,7 +215,7 @@ func planChatDir(g layout.Group, id string, have map[string]string) ([]Action, e
 				if err != nil {
 					return err
 				}
-				put(files, rel, a, file{path: path, mtime: info.ModTime()})
+				put(files, rel, m, file{path: path, mtime: info.ModTime()})
 			default:
 				return errUnexpected
 			}
@@ -237,15 +237,15 @@ func planChatDir(g layout.Group, id string, have map[string]string) ([]Action, e
 	name := "local_" + id
 	var out []Action
 	for rel, present := range dirs {
-		for _, a := range g.Accounts {
-			if !present[a] {
-				out = append(out, Action{Op: Mkdir, Dst: filepath.Join(g.OrgDir(a), name, rel)})
+		for _, m := range g.Members {
+			if !present[m] {
+				out = append(out, Action{Op: Mkdir, Dst: filepath.Join(g.Dir(m), name, rel)})
 			}
 		}
 	}
 	for rel, copies := range files {
-		out = append(out, newestWins(g, copies, func(a string) string {
-			return filepath.Join(g.OrgDir(a), name, rel)
+		out = append(out, newestWins(g, copies, func(m string) string {
+			return filepath.Join(g.Dir(m), name, rel)
 		})...)
 	}
 	return out, nil
@@ -268,11 +268,11 @@ func isTemp(name string) bool {
 
 // newestWins copies the newest copy over every older or missing one. Equal
 // times are left alone: with one account signed in at a time, equal means same.
-func newestWins(g layout.Group, have map[string]file, dst func(account string) string) []Action {
+func newestWins(g layout.Group, have map[string]file, dst func(member string) string) []Action {
 	var best file
 	found := false
-	for _, a := range g.Accounts {
-		f, ok := have[a]
+	for _, m := range g.Members {
+		f, ok := have[m]
 		if ok && (!found || f.mtime.After(best.mtime)) {
 			best, found = f, true
 		}
@@ -281,31 +281,31 @@ func newestWins(g layout.Group, have map[string]file, dst func(account string) s
 		return nil
 	}
 	var out []Action
-	for _, a := range g.Accounts {
-		if f, ok := have[a]; ok && !f.mtime.Before(best.mtime) {
+	for _, m := range g.Members {
+		if f, ok := have[m]; ok && !f.mtime.Before(best.mtime) {
 			continue
 		}
-		out = append(out, Action{Op: Copy, Src: best.path, Dst: dst(a)})
+		out = append(out, Action{Op: Copy, Src: best.path, Dst: dst(m)})
 	}
 	return out
 }
 
 // trashPath mirrors src's place under the app folder inside this run's trash.
-func trashPath(g layout.Group, trashRoot, account, src string) string {
-	return filepath.Join(trashRoot, filepath.Base(g.Root.Dir), account, g.Org, filepath.Base(src))
+func trashPath(g layout.Group, trashRoot, member, src string) string {
+	return filepath.Join(trashRoot, filepath.Base(g.Root.Dir), member, filepath.Base(src))
 }
 
-func put[V any](m map[string]map[string]V, key, account string, v V) {
+func put[V any](m map[string]map[string]V, key, member string, v V) {
 	if m[key] == nil {
 		m[key] = map[string]V{}
 	}
-	m[key][account] = v
+	m[key][member] = v
 }
 
-// first returns the value for the first account, in sorted order, that has one.
-func first[V any](accounts []string, have map[string]V) V {
-	for _, a := range accounts {
-		if v, ok := have[a]; ok {
+// first returns the value for the first member, in sorted order, that has one.
+func first[V any](members []string, have map[string]V) V {
+	for _, m := range members {
+		if v, ok := have[m]; ok {
 			return v
 		}
 	}

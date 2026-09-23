@@ -57,46 +57,54 @@ func TestClassify(t *testing.T) {
 	}
 }
 
-func TestDiscoverGroupsAccountsByOrg(t *testing.T) {
+func TestGroupsHoldEveryOrgFolderOfLinkedAccounts(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()
+	o2 := "0e0e0e0e-0000-4000-8000-000000000002"
+	acctC := "cccccccc-0000-4000-8000-00000000000c"
+	acctD := "dddddddd-0000-4000-8000-00000000000d"
+	for _, m := range []string{
+		layout.Member(testtree.AcctA, testtree.Org),
+		layout.Member(testtree.AcctA, o2),
+		layout.Member(testtree.AcctB, testtree.Org),
+		layout.Member(acctC, o2),
+		layout.Member(acctD, testtree.Org),
+	} {
+		testtree.Mkdir(t, filepath.Join(dir, m))
+	}
 	root := layout.Root{Name: "code", Dir: dir}
-	lonely := "0e0e0e0e-0000-4000-8000-000000000002"
-	testtree.Mkdir(t, filepath.Join(dir, testtree.AcctA, testtree.Org))
-	testtree.Mkdir(t, filepath.Join(dir, testtree.AcctB, testtree.Org))
-	testtree.Mkdir(t, filepath.Join(dir, testtree.AcctA, lonely))
-	testtree.Mkdir(t, filepath.Join(dir, "skills-plugin"))
-	testtree.Write(t, filepath.Join(dir, ".DS_Store"), "", testtree.T0)
-
-	groups, err := layout.Discover([]layout.Root{root})
+	groups, err := layout.Groups([]layout.Root{root}, []layout.Set{
+		{Name: "ab", Accounts: []string{testtree.AcctA, testtree.AcctB}},
+		{Name: "c", Accounts: []string{acctC}},
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
 	if len(groups) != 2 {
 		t.Fatalf("got %d groups, want 2: %+v", len(groups), groups)
 	}
-	both, one := groups[0], groups[1]
-	if both.Org != testtree.Org || !slices.Equal(both.Accounts, []string{testtree.AcctA, testtree.AcctB}) || !both.Syncable() {
-		t.Errorf("shared org group: %+v", both)
+	want := []string{
+		layout.Member(testtree.AcctA, testtree.Org),
+		layout.Member(testtree.AcctA, o2),
+		layout.Member(testtree.AcctB, testtree.Org),
 	}
-	if one.Org != lonely || !slices.Equal(one.Accounts, []string{testtree.AcctA}) || one.Syncable() {
-		t.Errorf("single-account group: %+v", one)
+	if groups[0].Name != "ab" || !slices.Equal(groups[0].Members, want) || !groups[0].Syncable() {
+		t.Errorf("linked group = %+v, want members %v", groups[0], want)
 	}
-	if got, want := both.OrgDir(testtree.AcctB), filepath.Join(dir, testtree.AcctB, testtree.Org); got != want {
-		t.Errorf("OrgDir = %q, want %q", got, want)
+	if groups[1].Name != "c" || len(groups[1].Members) != 1 || groups[1].Syncable() {
+		t.Errorf("single-folder group = %+v", groups[1])
 	}
 }
 
-func TestDiscoverMissingRootIsEmpty(t *testing.T) {
+func TestAccountFoldersMissingRootIsEmpty(t *testing.T) {
 	t.Parallel()
-	root := layout.Root{Name: "code", Dir: filepath.Join(t.TempDir(), "missing")}
-	groups, err := layout.Discover([]layout.Root{root})
-	if err != nil || len(groups) != 0 {
-		t.Fatalf("got %v, %v; want no groups and no error", groups, err)
+	folders, err := layout.AccountFolders(layout.Root{Name: "code", Dir: filepath.Join(t.TempDir(), "missing")})
+	if err != nil || len(folders) != 0 {
+		t.Fatalf("got %v, %v", folders, err)
 	}
 }
 
-func TestDiscoverIgnoresSymlinksAndUppercase(t *testing.T) {
+func TestAccountFoldersIgnoreSymlinksAndUppercase(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()
 	real := filepath.Join(t.TempDir(), "real")
@@ -110,11 +118,15 @@ func TestDiscoverIgnoresSymlinksAndUppercase(t *testing.T) {
 	}
 	testtree.Mkdir(t, filepath.Join(dir, "CCCCCCCC-0000-4000-8000-00000000000C", testtree.Org))
 
-	groups, err := layout.Discover([]layout.Root{{Name: "code", Dir: dir}})
+	folders, err := layout.AccountFolders(layout.Root{Name: "code", Dir: dir})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(groups) != 0 {
-		t.Fatalf("got %+v, want symlinked and uppercase folders ignored", groups)
+	total := 0
+	for _, orgs := range folders {
+		total += len(orgs)
+	}
+	if total != 0 {
+		t.Fatalf("got %+v, want symlinked and uppercase folders ignored", folders)
 	}
 }

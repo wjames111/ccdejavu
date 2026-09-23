@@ -10,18 +10,18 @@ import (
 	"time"
 )
 
-// Group is the last result for one (root, org) group.
+// Group is the last result for one group of chat folders.
 type Group struct {
-	Root     string   `json:"root"`
-	Org      string   `json:"org"`
-	Accounts []string `json:"accounts"`
-	Actions  int      `json:"actions"`
-	Skipped  string   `json:"skipped,omitempty"`
+	Root    string   `json:"root"`
+	Name    string   `json:"name"`
+	Members []string `json:"members"`
+	Actions int      `json:"actions"`
+	Skipped string   `json:"skipped,omitempty"`
 }
 
 // State is everything ccdejavu remembers between runs.
 type State struct {
-	Backup   string    `json:"backup,omitempty"` // set once the first-run backup exists
+	Backup   string    `json:"backup,omitempty"` // set once the backup before a linked group's first sync exists
 	LastSync time.Time `json:"lastSync"`
 	Groups   []Group   `json:"groups"`
 }

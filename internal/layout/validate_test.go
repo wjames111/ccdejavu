@@ -13,17 +13,17 @@ import (
 func newGroup(t *testing.T) layout.Group {
 	t.Helper()
 	g := layout.Group{
-		Root:     layout.Root{Name: "cowork", Dir: t.TempDir(), ChatDirs: true},
-		Org:      testtree.Org,
-		Accounts: []string{testtree.AcctA, testtree.AcctB},
+		Root:    layout.Root{Name: "cowork", Dir: t.TempDir(), ChatDirs: true},
+		Name:    testtree.Org,
+		Members: []string{layout.Member(testtree.AcctA, testtree.Org), layout.Member(testtree.AcctB, testtree.Org)},
 	}
-	testtree.Mkdir(t, g.OrgDir(testtree.AcctA))
-	testtree.Mkdir(t, g.OrgDir(testtree.AcctB))
+	testtree.Mkdir(t, g.Dir(layout.Member(testtree.AcctA, testtree.Org)))
+	testtree.Mkdir(t, g.Dir(layout.Member(testtree.AcctB, testtree.Org)))
 	return g
 }
 
 func chatPath(g layout.Group, account, id string) string {
-	return filepath.Join(g.OrgDir(account), "local_"+id+".json")
+	return filepath.Join(g.Dir(layout.Member(account, testtree.Org)), "local_"+id+".json")
 }
 
 func TestValidateAcceptsRealShapedFolders(t *testing.T) {
@@ -31,8 +31,8 @@ func TestValidateAcceptsRealShapedFolders(t *testing.T) {
 	g := newGroup(t)
 	testtree.Write(t, chatPath(g, testtree.AcctA, testtree.Chat1), testtree.ChatJSON(testtree.Chat1, "one"), testtree.T0)
 	testtree.Write(t, chatPath(g, testtree.AcctB, testtree.Chat2), testtree.ChatJSON(testtree.Chat2, "two"), testtree.T0)
-	testtree.Write(t, filepath.Join(g.OrgDir(testtree.AcctA), "cowork-gb-cache.json"), "not json", testtree.T0)
-	testtree.Write(t, filepath.Join(g.OrgDir(testtree.AcctA), "deleted_"+testtree.Chat2), "1788202164972", testtree.T0)
+	testtree.Write(t, filepath.Join(g.Dir(layout.Member(testtree.AcctA, testtree.Org)), "cowork-gb-cache.json"), "not json", testtree.T0)
+	testtree.Write(t, filepath.Join(g.Dir(layout.Member(testtree.AcctA, testtree.Org)), "deleted_"+testtree.Chat2), "1788202164972", testtree.T0)
 	if err := layout.Validate(g); err != nil {
 		t.Fatal(err)
 	}
@@ -61,7 +61,7 @@ func TestValidateRejectsMismatchedSessionID(t *testing.T) {
 func TestCountChatsCountsOnlyChats(t *testing.T) {
 	t.Parallel()
 	g := newGroup(t)
-	dir := g.OrgDir(testtree.AcctA)
+	dir := g.Dir(layout.Member(testtree.AcctA, testtree.Org))
 	testtree.Write(t, chatPath(g, testtree.AcctA, testtree.Chat1), testtree.ChatJSON(testtree.Chat1, "one"), testtree.T0)
 	testtree.Write(t, chatPath(g, testtree.AcctA, testtree.Chat2), testtree.ChatJSON(testtree.Chat2, "two"), testtree.T0)
 	testtree.Write(t, filepath.Join(dir, "deleted_"+testtree.Chat1), "1", testtree.T0)

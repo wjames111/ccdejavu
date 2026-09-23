@@ -37,7 +37,7 @@ func (p Paths) CoworkRoot() string {
 // Data is ccdejavu's own folder.
 func (p Paths) Data() string { return filepath.Join(p.Home, ".ccdejavu") }
 
-// Backups holds the first-run backup.
+// Backups holds the backup taken before a linked group's first sync.
 func (p Paths) Backups() string { return filepath.Join(p.Data(), "backups") }
 
 // Trash holds chats removed because another account deleted them.
@@ -48,6 +48,12 @@ func (p Paths) State() string { return filepath.Join(p.Data(), "state.json") }
 
 // Lock keeps a manual sync and the watcher from running at once.
 func (p Paths) Lock() string { return filepath.Join(p.Data(), "lock") }
+
+// Links records which accounts the user chose to keep in sync.
+func (p Paths) Links() string { return filepath.Join(p.Data(), "links.json") }
+
+// ClaudeConfig is the Claude Code CLI's settings file, which names its signed-in account.
+func (p Paths) ClaudeConfig() string { return filepath.Join(p.Home, ".claude.json") }
 
 // Logs is where launchd writes the watcher's output.
 func (p Paths) Logs() string { return filepath.Join(p.Home, "Library", "Logs", "ccdejavu") }

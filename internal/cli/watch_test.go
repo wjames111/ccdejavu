@@ -16,7 +16,7 @@ func TestSyncLogReportLogsAStuckGroupOnce(t *testing.T) {
 	var buf bytes.Buffer
 	log := slog.New(slog.NewTextHandler(&buf, &slog.HandlerOptions{Level: slog.LevelDebug}))
 	s := &syncLog{p: paths.Paths{Home: "/h"}, log: log, last: map[string]string{}}
-	skipped := []state.Group{{Root: "code", Org: testtree.Org, Skipped: "boom"}}
+	skipped := []state.Group{{Root: "code", Name: testtree.Org, Skipped: "boom"}}
 
 	s.report(skipped)
 	s.report(skipped)
@@ -39,7 +39,7 @@ func TestSyncLogReportLogsAStuckGroupOnce(t *testing.T) {
 	}
 
 	buf.Reset()
-	s.report([]state.Group{{Root: "code", Org: testtree.Org, Actions: 1}})
+	s.report([]state.Group{{Root: "code", Name: testtree.Org, Actions: 1}})
 	if !strings.Contains(buf.String(), "msg=recovered") {
 		t.Errorf("output = %q, want a recovered line", buf.String())
 	}

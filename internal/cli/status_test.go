@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -10,13 +11,31 @@ import (
 	"github.com/wjames111/ccdejavu/internal/testtree"
 )
 
+func TestStatusWithNoLinksListsUnlinkedAccounts(t *testing.T) {
+	t.Parallel()
+	home := t.TempDir()
+	p := paths.Paths{Home: home}
+	testtree.Mkdir(t, filepath.Join(p.CodeRoot(), testtree.AcctA, testtree.Org))
+	testtree.Mkdir(t, filepath.Join(p.CodeRoot(), testtree.AcctB, testtree.Org))
+
+	out, err := runCLI(t, "--home", home, "status")
+	if err != nil {
+		t.Fatal(err)
+	}
+	expectAll(t, out,
+		"No linked accounts yet. Run: ccdejavu link <email> <email>",
+		"Not linked: aaaaaaaa (email unknown), bbbbbbbb (email unknown)",
+	)
+}
+
 func TestGroupResult(t *testing.T) {
 	t.Parallel()
 	p := paths.Paths{Home: "/h"}
+	memberA, memberB := layout.Member(testtree.AcctA, testtree.Org), layout.Member(testtree.AcctB, testtree.Org)
 	grp := layout.Group{
-		Root:     layout.Root{Name: "code"},
-		Org:      testtree.Org,
-		Accounts: []string{testtree.AcctA, testtree.AcctB},
+		Root:    layout.Root{Name: "code"},
+		Name:    testtree.Org,
+		Members: []string{memberA, memberB},
 	}
 	cases := []struct {
 		name    string
@@ -27,9 +46,9 @@ func TestGroupResult(t *testing.T) {
 	}{
 		{
 			name: "only one account",
-			grp:  layout.Group{Root: grp.Root, Org: testtree.Org, Accounts: []string{testtree.AcctA}},
+			grp:  layout.Group{Root: grp.Root, Name: testtree.Org, Members: []string{memberA}},
 			st:   state.State{},
-			want: "only one account here, nothing to sync",
+			want: "only one folder here, nothing to sync",
 		},
 		{
 			name: "no record",
@@ -41,7 +60,7 @@ func TestGroupResult(t *testing.T) {
 			name: "same accounts, no skip",
 			grp:  grp,
 			st: state.State{Groups: []state.Group{
-				{Root: "code", Org: testtree.Org, Accounts: []string{testtree.AcctA, testtree.AcctB}, Actions: 2},
+				{Root: "code", Name: testtree.Org, Members: []string{memberA, memberB}, Actions: 2},
 			}},
 			want: "in sync (last sync made 2 changes)",
 		},
@@ -49,15 +68,15 @@ func TestGroupResult(t *testing.T) {
 			name: "accounts differ",
 			grp:  grp,
 			st: state.State{Groups: []state.Group{
-				{Root: "code", Org: testtree.Org, Accounts: []string{testtree.AcctA}, Actions: 2},
+				{Root: "code", Name: testtree.Org, Members: []string{memberA}, Actions: 2},
 			}},
-			hasWant: "an account was added",
+			hasWant: "the folders changed",
 		},
 		{
 			name: "skipped, no actions",
 			grp:  grp,
 			st: state.State{Groups: []state.Group{
-				{Root: "code", Org: testtree.Org, Accounts: []string{testtree.AcctA, testtree.AcctB}, Skipped: "boom"},
+				{Root: "code", Name: testtree.Org, Members: []string{memberA, memberB}, Skipped: "boom"},
 			}},
 			hasWant: "skipped last sync:",
 		},
@@ -65,7 +84,7 @@ func TestGroupResult(t *testing.T) {
 			name: "skipped, partial",
 			grp:  grp,
 			st: state.State{Groups: []state.Group{
-				{Root: "code", Org: testtree.Org, Accounts: []string{testtree.AcctA, testtree.AcctB}, Actions: 3, Skipped: "boom"},
+				{Root: "code", Name: testtree.Org, Members: []string{memberA, memberB}, Actions: 3, Skipped: "boom"},
 			}},
 			hasWant: "partly synced last time (3 changes made)",
 		},

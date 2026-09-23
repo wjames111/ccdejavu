@@ -1,5 +1,5 @@
-// Package syncer runs one full sync: back up on the first run, then validate,
-// plan, and apply every group, and record what happened.
+// Package syncer runs one full sync: back up before a linked group's first
+// sync, then validate, plan, and apply every group, and record what happened.
 package syncer
 
 import (
@@ -7,11 +7,13 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"slices"
 	"time"
 
 	"github.com/wjames111/ccdejavu/internal/apply"
 	"github.com/wjames111/ccdejavu/internal/backup"
 	"github.com/wjames111/ccdejavu/internal/layout"
+	"github.com/wjames111/ccdejavu/internal/links"
 	"github.com/wjames111/ccdejavu/internal/paths"
 	"github.com/wjames111/ccdejavu/internal/plan"
 	"github.com/wjames111/ccdejavu/internal/state"
@@ -26,8 +28,8 @@ type Options struct {
 }
 
 // Run syncs every group once. A group that fails validation or apply is
-// recorded as skipped and the rest still sync. A failed first-run backup
-// stops everything.
+// recorded as skipped and the rest still sync. A failed backup before a
+// linked group's first sync stops everything.
 func Run(opts Options) (state.State, error) {
 	p := opts.Paths
 	roots := layout.Roots(p)
@@ -44,20 +46,28 @@ func Run(opts Options) (state.State, error) {
 	if err != nil {
 		return st, fmt.Errorf("reading %s: %w", p.State(), err)
 	}
-	groups, err := layout.Discover(roots)
+	l, err := links.Load(p.Links())
+	if err != nil {
+		return st, err
+	}
+	groups, err := layout.Groups(roots, l.Sets())
 	if err != nil {
 		return st, err
 	}
 
 	stamp := opts.Now().UTC().Format("20060102-150405")
-	if st.Backup == "" {
+	anySyncable := slices.ContainsFunc(groups, layout.Group.Syncable)
+	newSyncable := slices.ContainsFunc(groups, func(g layout.Group) bool {
+		return g.Syncable() && !recorded(st, g)
+	})
+	if anySyncable && (st.Backup == "" || newSyncable) {
 		dest := filepath.Join(p.Backups(), stamp)
 		if opts.DryRun {
 			fmt.Fprintf(opts.Out, "Would back up both folders to %s first\n", dest)
 		} else {
 			fmt.Fprintf(opts.Out, "Backing up both folders to %s first (this can take a minute)\n", dest)
 			if err := takeBackup(roots, dest); err != nil {
-				return st, fmt.Errorf("first-run backup failed, nothing was synced: %w", err)
+				return st, fmt.Errorf("backup failed, nothing was synced: %w", err)
 			}
 			st.Backup = dest
 			if err := state.Save(p.State(), st); err != nil {
@@ -70,7 +80,7 @@ func Run(opts Options) (state.State, error) {
 	trashRoot := filepath.Join(p.Trash(), stamp)
 	st.Groups = nil
 	for _, g := range groups {
-		rec := state.Group{Root: g.Root.Name, Org: g.Org, Accounts: g.Accounts}
+		rec := state.Group{Root: g.Root.Name, Name: g.Name, Members: g.Members}
 		if g.Syncable() {
 			n, err := syncGroup(g, trashRoot, opts)
 			rec.Actions = n
@@ -107,6 +117,25 @@ func syncGroup(g layout.Group, trashRoot string, opts Options) (int, error) {
 		return done, fmt.Errorf("stopped after %d of %d changes: %w", done, len(actions), err)
 	}
 	return done, nil
+}
+
+// recorded reports whether g's members were already covered by a previous run's group with
+// the same root, so unlinking (which shrinks a group) doesn't trigger another backup, but
+// linking (which adds folders) still does.
+func recorded(st state.State, g layout.Group) bool {
+	return slices.ContainsFunc(st.Groups, func(r state.Group) bool {
+		return r.Root == g.Root.Name && isSubset(g.Members, r.Members)
+	})
+}
+
+// isSubset reports whether every member of a is also in b.
+func isSubset(a, b []string) bool {
+	for _, m := range a {
+		if !slices.Contains(b, m) {
+			return false
+		}
+	}
+	return true
 }
 
 // takeBackup renames the copy into place only when it's complete, so a failed backup never looks real.

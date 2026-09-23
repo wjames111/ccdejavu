@@ -43,7 +43,7 @@ homebrew_casks:
       name: homebrew-tap
       token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
     homepage: "https://github.com/wjames111/ccdejavu"
-    description: "Keep Claude desktop app chats in sync across every account on your Mac"
+    description: "Keep Claude desktop app chats in sync across the accounts you link"
     license: "MIT"
     # ccdejavu isn't notarized, so strip the quarantine flag Homebrew's download adds.
     hooks:

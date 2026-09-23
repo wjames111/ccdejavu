@@ -27,12 +27,12 @@ func setup(t *testing.T, chatDirs bool) fixture {
 	app := filepath.Join(base, "app", "local-agent-mode-sessions")
 	trash := filepath.Join(base, "trash")
 	g := layout.Group{
-		Root:     layout.Root{Name: "cowork", Dir: app, ChatDirs: chatDirs},
-		Org:      testtree.Org,
-		Accounts: []string{testtree.AcctA, testtree.AcctB},
+		Root:    layout.Root{Name: "cowork", Dir: app, ChatDirs: chatDirs},
+		Name:    testtree.Org,
+		Members: []string{layout.Member(testtree.AcctA, testtree.Org), layout.Member(testtree.AcctB, testtree.Org)},
 	}
-	testtree.Mkdir(t, g.OrgDir(testtree.AcctA))
-	testtree.Mkdir(t, g.OrgDir(testtree.AcctB))
+	testtree.Mkdir(t, g.Dir(layout.Member(testtree.AcctA, testtree.Org)))
+	testtree.Mkdir(t, g.Dir(layout.Member(testtree.AcctB, testtree.Org)))
 	short := strings.NewReplacer(
 		app, "APP", trash, "TRASH",
 		testtree.AcctA, "A", testtree.AcctB, "B", testtree.Org, "O",
@@ -42,7 +42,7 @@ func setup(t *testing.T, chatDirs bool) fixture {
 }
 
 func (f fixture) in(account string, parts ...string) string {
-	return filepath.Join(append([]string{f.g.OrgDir(account)}, parts...)...)
+	return filepath.Join(append([]string{f.g.Dir(layout.Member(account, testtree.Org))}, parts...)...)
 }
 
 func (f fixture) expect(t *testing.T, want ...string) {

@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"testing"
 	"time"
+
+	"github.com/wjames111/ccdejavu/internal/links"
 )
 
 // Made-up ids in the app's lowercase UUID form.
@@ -71,4 +73,16 @@ func MTime(t *testing.T, path string) time.Time {
 func Exists(path string) bool {
 	_, err := os.Lstat(path)
 	return err == nil
+}
+
+// Link writes a links file joining the given account IDs, with emails made from their first 8 characters.
+func Link(t *testing.T, path string, ids ...string) {
+	t.Helper()
+	var accts []links.Account
+	for _, id := range ids {
+		accts = append(accts, links.Account{Email: id[:8] + "@example.com", ID: id})
+	}
+	if err := links.Save(path, links.Links{Groups: []links.Group{{Accounts: accts}}}); err != nil {
+		t.Fatal(err)
+	}
 }
