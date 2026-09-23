@@ -19,6 +19,7 @@ func TestPathsAreRootedAtHome(t *testing.T) {
 		{p.State(), "/h/.ccdejavu/state.json"},
 		{p.Lock(), "/h/.ccdejavu/lock"},
 		{p.Links(), "/h/.ccdejavu/links.json"},
+		{p.ClaudeConfig(), "/h/.claude.json"},
 		{p.Logs(), "/h/Library/Logs/ccdejavu"},
 		{p.LaunchAgents(), "/h/Library/LaunchAgents"},
 	}

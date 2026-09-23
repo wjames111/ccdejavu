@@ -52,6 +52,9 @@ func (p Paths) Lock() string { return filepath.Join(p.Data(), "lock") }
 // Links records which accounts the user chose to keep in sync.
 func (p Paths) Links() string { return filepath.Join(p.Data(), "links.json") }
 
+// ClaudeConfig is the Claude Code CLI's settings file, which names its signed-in account.
+func (p Paths) ClaudeConfig() string { return filepath.Join(p.Home, ".claude.json") }
+
 // Logs is where launchd writes the watcher's output.
 func (p Paths) Logs() string { return filepath.Join(p.Home, "Library", "Logs", "ccdejavu") }
 
