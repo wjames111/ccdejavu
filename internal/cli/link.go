@@ -30,6 +30,14 @@ func newLinkCommand(g *globals) *cobra.Command {
 					return fmt.Errorf("%q doesn't look like an email", e)
 				}
 			}
+			emails := [2]string{strings.ToLower(strings.TrimSpace(args[0])), strings.ToLower(strings.TrimSpace(args[1]))}
+			if emails[0] == emails[1] {
+				return errors.New("the two emails are the same")
+			}
+			l, err := links.Load(p.Links())
+			if err != nil {
+				return err
+			}
 			sums, err := accounts.Summarize(p)
 			if err != nil {
 				return err
@@ -37,14 +45,14 @@ func newLinkCommand(g *globals) *cobra.Command {
 			if len(sums) < 2 {
 				return fmt.Errorf("found %s on this Mac; sign each account into the Claude desktop app once, then try again", plural(len(sums), "account"))
 			}
-			l, err := links.Load(p.Links())
-			if err != nil {
-				return err
+			for i := range sums {
+				if e := l.EmailFor(sums[i].ID); e != "" {
+					sums[i].Email = e
+				}
 			}
 			w, in := cmd.OutOrStdout(), bufio.NewScanner(cmd.InOrStdin())
 			var picked []links.Account
-			for _, email := range args {
-				email = strings.ToLower(strings.TrimSpace(email))
+			for _, email := range emails {
 				s, err := pick(w, in, email, sums, picked)
 				if err != nil {
 					return err
@@ -52,7 +60,8 @@ func newLinkCommand(g *globals) *cobra.Command {
 				picked = append(picked, links.Account{Email: email, ID: s.ID})
 			}
 			fmt.Fprintln(w, "\nLinked accounts share one chat list. Continuing a chat under the other account sends that conversation to that account.")
-			if !ask(w, in, fmt.Sprintf("Link %s and %s? [y/N] ", picked[0].Email, picked[1].Email), false) {
+			ok, err := ask(w, in, fmt.Sprintf("Link %s and %s? [y/N] ", picked[0].Email, picked[1].Email), false)
+			if err != nil || !ok {
 				fmt.Fprintln(w, "Nothing changed.")
 				return nil
 			}
@@ -110,7 +119,11 @@ func pick(w io.Writer, in *bufio.Scanner, email string, sums []accounts.Summary,
 	if i := slices.IndexFunc(candidates, func(s accounts.Summary) bool { return s.Email == email }); i >= 0 {
 		s := candidates[i]
 		fmt.Fprintf(w, "\nFound %s (%s, %s).\n", email, short(s.ID), plural(s.Chats, "chat"))
-		if ask(w, in, "Use it? [Y/n] ", true) {
+		ok, err := ask(w, in, "Use it? [Y/n] ", true)
+		if err != nil {
+			return accounts.Summary{}, err
+		}
+		if ok {
 			return s, nil
 		}
 	}
@@ -145,17 +158,18 @@ func pick(w io.Writer, in *bufio.Scanner, email string, sums []accounts.Summary,
 	}
 }
 
-// ask reads a yes/no answer; an empty answer means def.
-func ask(w io.Writer, in *bufio.Scanner, prompt string, def bool) bool {
+// ask reads a yes/no answer; an empty answer means def. Closed input (no
+// answer at all) is an error, not a default, so callers can stop immediately.
+func ask(w io.Writer, in *bufio.Scanner, prompt string, def bool) (bool, error) {
 	fmt.Fprint(w, prompt)
 	if !in.Scan() {
-		return false
+		return false, errors.New("no answer given")
 	}
 	switch strings.ToLower(strings.TrimSpace(in.Text())) {
 	case "":
-		return def
+		return def, nil
 	case "y", "yes":
-		return true
+		return true, nil
 	}
-	return false
+	return false, nil
 }

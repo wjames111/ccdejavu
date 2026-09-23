@@ -96,6 +96,85 @@ func TestLinkNeedsTwoAccounts(t *testing.T) {
 	}
 }
 
+func TestLinkReusesASavedEmail(t *testing.T) {
+	t.Parallel()
+	p := linkHome(t)
+	pre := links.Links{Groups: []links.Group{{Accounts: []links.Account{
+		{Email: "a@x.com", ID: testtree.AcctA},
+		{Email: "b@y.com", ID: testtree.AcctB},
+	}}}}
+	if err := links.Save(p.Links(), pre); err != nil {
+		t.Fatal(err)
+	}
+	out, err := runCLIWithInput(t, "y\ny\ny\n", "--home", p.Home, "link", "a@x.com", "b@y.com")
+	if err != nil {
+		t.Fatalf("%v\n%s", err, out)
+	}
+	expectAll(t, out, "Found a@x.com", "Found b@y.com")
+	l, err := links.Load(p.Links())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(l.Groups) != 1 || len(l.Groups[0].Accounts) != 2 {
+		t.Errorf("links = %+v", l)
+	}
+}
+
+func TestLinkAddsAThirdAccountWithoutOfferingLinkedOnes(t *testing.T) {
+	t.Parallel()
+	p := linkHome(t)
+	acctC := "cccccccc-0000-4000-8000-00000000000c"
+	testtree.Write(t, filepath.Join(p.CodeRoot(), acctC, testtree.Org, "local_c3c3c3c3-0000-4000-8000-000000000003.json"),
+		`{"sessionId":"local_c3c3c3c3-0000-4000-8000-000000000003","title":"gamma"}`, testtree.T0)
+	pre := links.Links{Groups: []links.Group{{Accounts: []links.Account{
+		{Email: "a@x.com", ID: testtree.AcctA},
+		{Email: "b@y.com", ID: testtree.AcctB},
+	}}}}
+	if err := links.Save(p.Links(), pre); err != nil {
+		t.Fatal(err)
+	}
+	out, err := runCLIWithInput(t, "y\n1\ny\n", "--home", p.Home, "link", "b@y.com", "c@z.com")
+	if err != nil {
+		t.Fatalf("%v\n%s", err, out)
+	}
+	i := strings.Index(out, "Which account is c@z.com?")
+	if i < 0 {
+		t.Fatalf("output never asked which account is c@z.com:\n%s", out)
+	}
+	list := out[i:]
+	if strings.Contains(list, short(testtree.AcctA)) || strings.Contains(list, short(testtree.AcctB)) {
+		t.Errorf("offered an already-linked account for c@z.com:\n%s", list)
+	}
+	l, err := links.Load(p.Links())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(l.Groups) != 1 || len(l.Groups[0].Accounts) != 3 {
+		t.Errorf("links = %+v", l)
+	}
+}
+
+func TestLinkSameEmailTwiceErrorsImmediately(t *testing.T) {
+	t.Parallel()
+	p := paths.Paths{Home: t.TempDir()}
+	out, err := runCLIWithInput(t, "", "--home", p.Home, "link", "a@x.com", "A@x.com")
+	if err == nil || !strings.Contains(err.Error(), "same") {
+		t.Fatalf("err = %v\n%s", err, out)
+	}
+}
+
+func TestLinkClosedInputAtUseItPromptStopsImmediately(t *testing.T) {
+	t.Parallel()
+	p := linkHome(t)
+	out, err := runCLIWithInput(t, "", "--home", p.Home, "link", "a@x.com", "b@y.com")
+	if err == nil || !strings.Contains(err.Error(), "no answer") {
+		t.Fatalf("err = %v\n%s", err, out)
+	}
+	if strings.Contains(out, "Which account is") {
+		t.Errorf("fell through to the picker list after closed input:\n%s", out)
+	}
+}
+
 func TestUnlink(t *testing.T) {
 	t.Parallel()
 	p := linkHome(t)
