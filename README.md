@@ -2,22 +2,56 @@
 
 Keeps your Claude desktop app chats with you when you switch accounts.
 
-If you use more than one Claude account, say work and personal, or several seats on a team plan, the desktop app keeps a separate chat list for each one. Sign in with a different account and your Code tab and Cowork chats seem to vanish, even though they're still on your Mac. ccdejavu runs in the background and keeps those lists matched across every account signed in on this Mac, as long as the accounts are in the same org.
+If you use more than one Claude account, say work and personal, or several seats on a team plan, the desktop app keeps a separate chat list for each one. Sign in with a different account and your Code tab and Cowork chats seem to vanish, even though they're still on your Mac. ccdejavu runs in the background and keeps chats matched across any accounts you link, in any org. Nothing syncs until you link accounts by email.
 
 macOS only.
 
 ## Install
 
 1. Install with Homebrew: `brew install wjames111/tap/ccdejavu`, or with Go: `go install github.com/wjames111/ccdejavu/cmd/ccdejavu@latest`
-2. Optional: see what would change first with `ccdejavu sync --dry-run`
-3. Run `ccdejavu install`. It backs up the app's chat folders, syncs once, and starts a background job (a LaunchAgent) that keeps syncing. The backup takes about 30 seconds
-4. Restart the Claude desktop app (Cmd+Q, then reopen) so it shows the synced chats. The app reads its chat list when it opens
-5. Check things over with `ccdejavu status` and `ccdejavu doctor`
+2. Link the accounts you want kept in sync: `ccdejavu link you@work.com you@home.com`
+3. Optional: see what would change first with `ccdejavu sync --dry-run`
+4. Run `ccdejavu install`. It backs up the app's chat folders, syncs once, and starts a background job (a LaunchAgent) that keeps syncing. The backup takes about 30 seconds
+5. Restart the Claude desktop app (Cmd+Q, then reopen) so it shows the synced chats. The app reads its chat list when it opens
+6. Check things over with `ccdejavu status` and `ccdejavu doctor`
+
+## Linking accounts
+
+Run `ccdejavu link <email> <email>` and answer its questions. The app doesn't store emails where ccdejavu can read them, so it asks you to help match each email to an account on this Mac:
+
+- If ccdejavu already knows an account's email, from a Cowork chat or from the Claude Code CLI's own settings, it proposes that account and asks you to confirm.
+- Otherwise it lists the candidate accounts by chat count and their most recent chat titles, so you can tell them apart. The account with the newest chat activity is marked "most recently active".
+
+For example:
+
+```
+$ ccdejavu link you@work.com you@home.com
+
+Found you@work.com (c4ed0833, 181 chats).
+Use it? [Y/n] y
+
+Which account is you@home.com?
+  1) 2a0c2d48  email not found on this Mac  83 chats  · most recently active
+     "Trip planning", "Budget spreadsheet", "Birthday ideas"
+> 1
+
+Linked accounts share one chat list. Continuing a chat under the other account sends that conversation to that account.
+Link you@work.com and you@home.com? [y/N] y
+Linked. Run `ccdejavu sync` to sync now, or `ccdejavu install` to keep them in sync in the background.
+```
+
+To add a third account, run `ccdejavu link` again with one email already in the group plus the new one, for example `ccdejavu link you@work.com you@new.com`. All the linked accounts end up sharing one chat list.
+
+Run `ccdejavu unlink <email>` to stop syncing an account. Chats it already has stay where they are; it just stops getting new copies.
+
+Continuing a chat under a different account sends that conversation to that account from then on. `link` shows this note before asking you to confirm.
 
 ## Commands
 
 | Command | What it does |
 |---|---|
+| `ccdejavu link` | Link two accounts so their chats stay in sync |
+| `ccdejavu unlink` | Stop syncing an account (chats already copied stay put) |
 | `ccdejavu install` | Back up, sync once, and start the background job |
 | `ccdejavu sync` | Sync once, now. `--dry-run` shows what would change and changes nothing |
 | `ccdejavu status` | Accounts, chat counts, last sync, anything skipped, trash size |
@@ -32,7 +66,7 @@ In `~/Library/Application Support/Claude/`, the app keeps one folder per account
 - `claude-code-sessions/<account>/<org>/` for Code tab chats
 - `local-agent-mode-sessions/<account>/<org>/` for Cowork chats
 
-ccdejavu copies only what it knows is a chat: `local_<id>.json`, a Cowork chat's `local_<id>/` folder, and `deleted_<id>` markers. Everything else is left alone, including account caches, scheduled tasks, the account settings inside each Cowork chat's `.claude/` folder and temporary uploads, and anything a future app version adds. The conversations themselves live in `~/.claude/projects/` and are already shared by every account, so ccdejavu doesn't touch them.
+Linked accounts share one combined chat list across all their orgs: every org folder of every account in the group gets the same chats. ccdejavu copies only what it knows is a chat: `local_<id>.json`, a Cowork chat's `local_<id>/` folder, and `deleted_<id>` markers. Everything else is left alone, including account caches, scheduled tasks, the account settings inside each Cowork chat's `.claude/` folder and temporary uploads, and anything a future app version adds. The conversations themselves live in `~/.claude/projects/` and are already shared by every account, so ccdejavu doesn't touch them.
 
 ## How changes carry over
 
@@ -50,7 +84,7 @@ ccdejavu copies only what it knows is a chat: `local_<id>.json`, a Cowork chat's
 ## Limits
 
 - Only the Mac desktop app's Code tab and Cowork chats. claude.ai chats live on Anthropic's servers.
-- Only accounts on this Mac, and only within the same org.
+- Only accounts on this Mac, and only the ones you've linked.
 - Scheduled tasks stay per account.
 - The app's folder layout isn't a public API. An app update could change it; ccdejavu is built to stop, not guess, when that happens.
 
