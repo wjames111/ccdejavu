@@ -1,0 +1,22 @@
+name: Lint PR
+
+on:
+  pull_request_target:
+    types:
+      - opened
+      - edited
+      - synchronize
+      - reopened
+
+permissions:
+  pull-requests: read
+
+jobs:
+  semantic-pr:
+    name: Validate PR title
+    runs-on: ubuntu-latest
+    steps:
+      # release-please reads squash-merged PR titles to pick the next version.
+      - uses: amannn/action-semantic-pull-request@v6
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

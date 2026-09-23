@@ -1,0 +1,60 @@
+version: 2
+
+project_name: ccdejavu
+
+builds:
+  - binary: ccdejavu
+    main: ./cmd/ccdejavu
+    ldflags:
+      - -s -w
+      - -X github.com/wjames111/ccdejavu/internal/build.Version={{.Version}}
+      - -X github.com/wjames111/ccdejavu/internal/build.Date={{time "2006-01-02"}}
+    env:
+      - CGO_ENABLED=0
+    # The folders ccdejavu syncs belong to the macOS desktop app.
+    goos:
+      - darwin
+    goarch:
+      - "amd64"
+      - "arm64"
+
+checksum:
+  name_template: '{{ .ProjectName }}-{{ .Tag }}.sha256sum'
+
+snapshot:
+  version_template: "{{ .Tag }}-dev"
+
+archives:
+  - formats: [ 'tar.gz' ]
+    name_template: "{{ .ProjectName }}-{{ .Tag }}-{{ .Os }}-{{ .Arch }}"
+    files:
+      - README.md
+      - LICENSE
+
+changelog:
+  disable: true
+
+homebrew_casks:
+  - name: ccdejavu
+    binaries:
+      - ccdejavu
+    repository:
+      owner: wjames111
+      name: homebrew-tap
+      token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
+    homepage: "https://github.com/wjames111/ccdejavu"
+    description: "Keep Claude desktop app chats in sync across every account on your Mac"
+    license: "MIT"
+    # ccdejavu isn't notarized, so strip the quarantine flag Homebrew's download adds.
+    hooks:
+      post:
+        install: |
+          if OS.mac?
+            system_command "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "#{staged_path}/ccdejavu"]
+          end
+
+release:
+  github:
+    owner: wjames111
+    name: ccdejavu
+  skip_upload: false

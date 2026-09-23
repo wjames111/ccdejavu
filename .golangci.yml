@@ -1,0 +1,42 @@
+version: "2"
+linters:
+  enable:
+    - mirror
+    - misspell
+    - noctx
+    - paralleltest
+    - thelper
+    - tparallel
+    - usetesting
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
+formatters:
+  enable:
+    - gofmt
+    - gofumpt
+    - goimports
+  settings:
+    gofmt:
+      rewrite-rules:
+        - pattern: interface{}
+          replacement: any
+    gofumpt:
+      module-path: github.com/wjames111/ccdejavu
+    goimports:
+      local-prefixes:
+        - github.com/wjames111/ccdejavu
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$

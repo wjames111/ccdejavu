@@ -1,0 +1,52 @@
+version: '3'
+# See https://github.com/go-task/task/blob/main/Taskfile.yml
+
+vars:
+  VERSION:
+    sh: git rev-parse --short HEAD 2>/dev/null || echo unknown
+  DATE: "{{ now | date \"2006-01-02\" }}"
+  LDFLAGS: -s -X github.com/wjames111/ccdejavu/internal/build.Version={{.VERSION}}-dev -X github.com/wjames111/ccdejavu/internal/build.Date={{.DATE}}
+
+tasks:
+  default:
+    cmds:
+      - task: lint:fix
+
+  lint:
+    desc: Runs golangci-lint
+    aliases: [l]
+    sources:
+      - './**/*.go'
+      - .golangci.yml
+    cmds:
+      - golangci-lint run
+
+  lint:fix:
+    desc: Runs golangci-lint and fixes any issues
+    sources:
+      - './**/*.go'
+      - .golangci.yml
+    cmds:
+      - golangci-lint run --fix
+
+  build:
+    desc: Builds the project
+    cmds:
+      - go build -ldflags="{{.LDFLAGS}}" -o ccdejavu ./cmd/ccdejavu {{.CLI_ARGS}}
+
+  run:
+    desc: Run development CLI
+    silent: true
+    cmds:
+      - go run -ldflags="{{.LDFLAGS}}" ./cmd/ccdejavu {{.CLI_ARGS}}
+
+  test:
+    desc: Run tests
+    cmds:
+      - go test -race -ldflags="{{.LDFLAGS}}" {{.CLI_ARGS}} ./...
+
+  watch:
+    desc: Run the watcher in the foreground with verbose logging
+    silent: true
+    cmds:
+      - go run -ldflags="{{.LDFLAGS}}" ./cmd/ccdejavu watch --log-level=debug {{.CLI_ARGS}}
