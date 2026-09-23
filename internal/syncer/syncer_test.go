@@ -266,6 +266,42 @@ func TestLinkedAccountsInDifferentOrgsSync(t *testing.T) {
 	}
 }
 
+func TestBacksUpAgainWhenAnAccountJoinsAnExistingGroup(t *testing.T) {
+	t.Parallel()
+	p := newHome(t)
+	testtree.Write(t, orgFile(p.CodeRoot(), testtree.AcctA, chatName(testtree.Chat1)), testtree.ChatJSON(testtree.Chat1, "one"), testtree.T0)
+	run(t, p, false)
+	first, err := os.ReadDir(p.Backups())
+	if err != nil || len(first) != 1 {
+		t.Fatalf("first backup = %v, %v; want exactly one", first, err)
+	}
+
+	acctC := "cccccccc-0000-4000-8000-00000000000c"
+	testtree.Write(t, orgFile(p.CodeRoot(), acctC, chatName(testtree.Chat1)), testtree.ChatJSON(testtree.Chat1, "c's copy"), testtree.T0)
+	testtree.Link(t, p.Links(), testtree.AcctA, testtree.AcctB, acctC)
+
+	st, err := syncer.Run(syncer.Options{Paths: p, Out: &bytes.Buffer{}, Now: func() time.Time { return testtree.T0.Add(time.Hour) }})
+	if err != nil {
+		t.Fatal(err)
+	}
+	second, err := os.ReadDir(p.Backups())
+	if err != nil || len(second) != 2 {
+		t.Fatalf("backups after linking C = %v, %v; want two", second, err)
+	}
+	wantBackup := filepath.Join(p.Backups(), "20260901-130000")
+	if st.Backup != wantBackup {
+		t.Errorf("Backup = %q, want %q", st.Backup, wantBackup)
+	}
+
+	if _, err := syncer.Run(syncer.Options{Paths: p, Out: &bytes.Buffer{}, Now: func() time.Time { return testtree.T0.Add(2 * time.Hour) }}); err != nil {
+		t.Fatal(err)
+	}
+	third, err := os.ReadDir(p.Backups())
+	if err != nil || len(third) != 2 {
+		t.Errorf("backups after an unchanged group synced again = %v, %v; want still two", third, err)
+	}
+}
+
 func TestLeavesOtherFilesAlone(t *testing.T) {
 	t.Parallel()
 	p := newHome(t)

@@ -56,7 +56,11 @@ func Run(opts Options) (state.State, error) {
 	}
 
 	stamp := opts.Now().UTC().Format("20060102-150405")
-	if st.Backup == "" && slices.ContainsFunc(groups, layout.Group.Syncable) {
+	anySyncable := slices.ContainsFunc(groups, layout.Group.Syncable)
+	newSyncable := slices.ContainsFunc(groups, func(g layout.Group) bool {
+		return g.Syncable() && !recorded(st, g)
+	})
+	if anySyncable && (st.Backup == "" || newSyncable) {
 		dest := filepath.Join(p.Backups(), stamp)
 		if opts.DryRun {
 			fmt.Fprintf(opts.Out, "Would back up both folders to %s first\n", dest)
@@ -113,6 +117,13 @@ func syncGroup(g layout.Group, trashRoot string, opts Options) (int, error) {
 		return done, fmt.Errorf("stopped after %d of %d changes: %w", done, len(actions), err)
 	}
 	return done, nil
+}
+
+// recorded reports whether g's exact member set was already recorded in a previous run.
+func recorded(st state.State, g layout.Group) bool {
+	return slices.ContainsFunc(st.Groups, func(r state.Group) bool {
+		return r.Root == g.Root.Name && slices.Equal(r.Members, g.Members)
+	})
 }
 
 // takeBackup renames the copy into place only when it's complete, so a failed backup never looks real.
