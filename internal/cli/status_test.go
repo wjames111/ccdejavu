@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -9,6 +10,23 @@ import (
 	"github.com/wjames111/ccdejavu/internal/state"
 	"github.com/wjames111/ccdejavu/internal/testtree"
 )
+
+func TestStatusWithNoLinksListsUnlinkedAccounts(t *testing.T) {
+	t.Parallel()
+	home := t.TempDir()
+	p := paths.Paths{Home: home}
+	testtree.Mkdir(t, filepath.Join(p.CodeRoot(), testtree.AcctA, testtree.Org))
+	testtree.Mkdir(t, filepath.Join(p.CodeRoot(), testtree.AcctB, testtree.Org))
+
+	out, err := runCLI(t, "--home", home, "status")
+	if err != nil {
+		t.Fatal(err)
+	}
+	expectAll(t, out,
+		"No linked accounts yet. Run: ccdejavu link <email> <email>",
+		"Not linked: aaaaaaaa (email unknown), bbbbbbbb (email unknown)",
+	)
+}
 
 func TestGroupResult(t *testing.T) {
 	t.Parallel()

@@ -2,6 +2,7 @@ package links_test
 
 import (
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
@@ -110,6 +111,21 @@ func TestEmailFor(t *testing.T) {
 	}
 	if got := l.EmailFor(idC); got != "" {
 		t.Errorf("EmailFor unknown = %q", got)
+	}
+}
+
+func TestSets(t *testing.T) {
+	t.Parallel()
+	var l links.Links
+	if err := l.Link(acct("a@x.com", idA), acct("b@y.com", idB)); err != nil {
+		t.Fatal(err)
+	}
+	sets := l.Sets()
+	if len(sets) != 1 || sets[0].Name != "a@x.com + b@y.com" {
+		t.Fatalf("got %+v", sets)
+	}
+	if !slices.Contains(sets[0].Accounts, idA) || !slices.Contains(sets[0].Accounts, idB) {
+		t.Fatalf("accounts = %v, want both ids", sets[0].Accounts)
 	}
 }
 

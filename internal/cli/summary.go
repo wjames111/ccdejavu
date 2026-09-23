@@ -18,16 +18,17 @@ func printSummary(w io.Writer, p paths.Paths, st state.State, dryRun bool) {
 		if len(g.Members) < 2 {
 			continue
 		}
+		heading := fmt.Sprintf("%s · %s", g.Root, g.Name)
 		if g.Skipped != "" && g.Actions > 0 {
-			fmt.Fprintf(w, "%s org %s: partly synced (%s made, then stopped): %s\n",
-				g.Root, short(g.Name), plural(g.Actions, "change"), p.Brief(g.Skipped))
+			fmt.Fprintf(w, "%s: partly synced (%s made, then stopped): %s\n",
+				heading, plural(g.Actions, "change"), p.Brief(g.Skipped))
 			continue
 		}
 		if g.Skipped != "" {
-			fmt.Fprintf(w, "%s org %s: skipped (%s)\n", g.Root, short(g.Name), p.Brief(g.Skipped))
+			fmt.Fprintf(w, "%s: skipped (%s)\n", heading, p.Brief(g.Skipped))
 			continue
 		}
-		fmt.Fprintf(w, "%s org %s: %s across %d folders\n", g.Root, short(g.Name), plural(g.Actions, noun), len(g.Members))
+		fmt.Fprintf(w, "%s: %s across %d folders\n", heading, plural(g.Actions, noun), len(g.Members))
 	}
 }
 

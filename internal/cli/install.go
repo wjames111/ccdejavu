@@ -9,6 +9,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/wjames111/ccdejavu/internal/launchd"
+	"github.com/wjames111/ccdejavu/internal/links"
 	"github.com/wjames111/ccdejavu/internal/syncer"
 )
 
@@ -38,6 +39,13 @@ func newInstallCommand(g *globals) *cobra.Command {
 				return err
 			}
 			printSummary(w, p, st, false)
+			l, err := links.Load(p.Links())
+			if err != nil {
+				return err
+			}
+			if len(l.Groups) == 0 {
+				fmt.Fprintln(w, "No accounts are linked yet, so nothing synced. Run: ccdejavu link <email> <email>")
+			}
 			if err := launchd.Install(cmd.Context(), p, bin); err != nil {
 				return fmt.Errorf("chats synced, but the background job didn't start: %w", err)
 			}

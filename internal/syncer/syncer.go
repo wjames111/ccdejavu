@@ -7,11 +7,13 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"slices"
 	"time"
 
 	"github.com/wjames111/ccdejavu/internal/apply"
 	"github.com/wjames111/ccdejavu/internal/backup"
 	"github.com/wjames111/ccdejavu/internal/layout"
+	"github.com/wjames111/ccdejavu/internal/links"
 	"github.com/wjames111/ccdejavu/internal/paths"
 	"github.com/wjames111/ccdejavu/internal/plan"
 	"github.com/wjames111/ccdejavu/internal/state"
@@ -44,13 +46,17 @@ func Run(opts Options) (state.State, error) {
 	if err != nil {
 		return st, fmt.Errorf("reading %s: %w", p.State(), err)
 	}
-	groups, err := layout.Discover(roots)
+	l, err := links.Load(p.Links())
+	if err != nil {
+		return st, err
+	}
+	groups, err := layout.Groups(roots, l.Sets())
 	if err != nil {
 		return st, err
 	}
 
 	stamp := opts.Now().UTC().Format("20060102-150405")
-	if st.Backup == "" {
+	if st.Backup == "" && slices.ContainsFunc(groups, layout.Group.Syncable) {
 		dest := filepath.Join(p.Backups(), stamp)
 		if opts.DryRun {
 			fmt.Fprintf(opts.Out, "Would back up both folders to %s first\n", dest)

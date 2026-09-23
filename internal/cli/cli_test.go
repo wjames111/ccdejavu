@@ -22,13 +22,14 @@ func runCLI(t *testing.T, args ...string) (string, error) {
 	return out.String(), err
 }
 
-// codeHome has accounts A and B in one org under the Code tab root, and one
+// codeHome has accounts A and B, linked, in one org under the Code tab root, and one
 // chat file with the given body in account A.
 func codeHome(t *testing.T, chat string) string {
 	t.Helper()
 	p := paths.Paths{Home: t.TempDir()}
 	testtree.Mkdir(t, filepath.Join(p.CodeRoot(), testtree.AcctB, testtree.Org))
 	testtree.Write(t, filepath.Join(p.CodeRoot(), testtree.AcctA, testtree.Org, "local_"+testtree.Chat1+".json"), chat, testtree.T0)
+	testtree.Link(t, paths.Paths{Home: p.Home}.Links(), testtree.AcctA, testtree.AcctB)
 	return p.Home
 }
 
@@ -48,7 +49,7 @@ func TestSyncDryRunPrintsThePlan(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	expectAll(t, out, "Would back up", "copy ", "code org 0e0e0e0e: 1 planned change across 2 folders")
+	expectAll(t, out, "Would back up", "copy ", "code · aaaaaaaa@example.com + bbbbbbbb@example.com: 1 planned change across 2 folders")
 }
 
 func TestSyncThenStatus(t *testing.T) {
@@ -58,15 +59,15 @@ func TestSyncThenStatus(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	expectAll(t, out, "code org 0e0e0e0e: 1 change across 2 folders")
+	expectAll(t, out, "code · aaaaaaaa@example.com + bbbbbbbb@example.com: 1 change across 2 folders")
 
 	out, err = runCLI(t, "--home", home, "status")
 	if err != nil {
 		t.Fatal(err)
 	}
 	expectAll(t, out,
-		"account aaaaaaaa · org 0e0e0e0e  1 chat",
-		"account bbbbbbbb · org 0e0e0e0e  1 chat",
+		"aaaaaaaa@example.com · org 0e0e0e0e  1 chat",
+		"bbbbbbbb@example.com · org 0e0e0e0e  1 chat",
 		"in sync (last sync made 1 change)",
 		fmt.Sprintf("%-16s%s", "Background job:", "not installed"),
 	)

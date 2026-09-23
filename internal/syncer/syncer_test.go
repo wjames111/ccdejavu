@@ -23,6 +23,7 @@ func newHome(t *testing.T) paths.Paths {
 		testtree.Mkdir(t, filepath.Join(root, testtree.AcctA, testtree.Org))
 		testtree.Mkdir(t, filepath.Join(root, testtree.AcctB, testtree.Org))
 	}
+	testtree.Link(t, p.Links(), testtree.AcctA, testtree.AcctB)
 	return p
 }
 
@@ -110,8 +111,13 @@ func TestDryRunChangesNothing(t *testing.T) {
 	if testtree.Exists(orgFile(p.CodeRoot(), testtree.AcctB, chatName(testtree.Chat1))) {
 		t.Error("dry run copied a chat")
 	}
-	if testtree.Exists(p.Data()) {
-		t.Error("dry run created ~/.ccdejavu")
+	// p.Data() itself already exists (newHome's links.json lives there); dry run must still
+	// take none of a real sync's actions.
+	if testtree.Exists(p.State()) {
+		t.Error("dry run recorded state")
+	}
+	if testtree.Exists(p.Backups()) {
+		t.Error("dry run took a backup")
 	}
 	if !strings.Contains(out, "Would back up") || !strings.Contains(out, "copy ") {
 		t.Errorf("output = %q, want the backup notice and the planned copy", out)
@@ -226,6 +232,37 @@ func TestPartialApplyIsReported(t *testing.T) {
 	}
 	if got := testtree.Read(t, taken); got != "already in the trash" {
 		t.Errorf("trash was overwritten: %q", got)
+	}
+}
+
+func TestNoLinksMeansNoSyncAndNoBackup(t *testing.T) {
+	t.Parallel()
+	p := paths.Paths{Home: t.TempDir()}
+	testtree.Write(t, orgFile(p.CodeRoot(), testtree.AcctA, chatName(testtree.Chat1)), testtree.ChatJSON(testtree.Chat1, "one"), testtree.T0)
+	testtree.Mkdir(t, filepath.Join(p.CodeRoot(), testtree.AcctB, testtree.Org))
+
+	st, _ := run(t, p, false)
+
+	if len(st.Groups) != 0 || st.Backup != "" {
+		t.Errorf("state = %+v, want no groups and no backup", st)
+	}
+	if testtree.Exists(orgFile(p.CodeRoot(), testtree.AcctB, chatName(testtree.Chat1))) {
+		t.Error("synced accounts that aren't linked")
+	}
+}
+
+func TestLinkedAccountsInDifferentOrgsSync(t *testing.T) {
+	t.Parallel()
+	p := paths.Paths{Home: t.TempDir()}
+	o2 := "0e0e0e0e-0000-4000-8000-000000000002"
+	testtree.Write(t, orgFile(p.CodeRoot(), testtree.AcctA, chatName(testtree.Chat1)), testtree.ChatJSON(testtree.Chat1, "work"), testtree.T0)
+	testtree.Mkdir(t, filepath.Join(p.CodeRoot(), testtree.AcctB, o2))
+	testtree.Link(t, p.Links(), testtree.AcctA, testtree.AcctB)
+
+	run(t, p, false)
+
+	if !testtree.Exists(filepath.Join(p.CodeRoot(), testtree.AcctB, o2, chatName(testtree.Chat1))) {
+		t.Error("chat didn't reach the linked account's other org")
 	}
 }
 

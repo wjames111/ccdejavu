@@ -12,6 +12,7 @@ import (
 
 	"github.com/wjames111/ccdejavu/internal/launchd"
 	"github.com/wjames111/ccdejavu/internal/layout"
+	"github.com/wjames111/ccdejavu/internal/links"
 	"github.com/wjames111/ccdejavu/internal/paths"
 )
 
@@ -55,18 +56,41 @@ func runChecks(ctx context.Context, p paths.Paths) []check {
 	}
 	checks := []check{{"Claude desktop app folder", err}}
 
-	groups, err := layout.Discover(layout.Roots(p))
-	if err == nil && len(groups) == 0 {
-		err = errors.New("no Code tab or Cowork account folders found")
+	roots := layout.Roots(p)
+	checks = append(checks, check{"chat folders", chatFoldersCheck(roots)})
+
+	l, linksErr := links.Load(p.Links())
+	linkedErr := linksErr
+	if linkedErr == nil && len(l.Groups) == 0 {
+		linkedErr = errors.New("none yet; run: ccdejavu link <email> <email>")
 	}
-	checks = append(checks, check{"chat folders", err})
-	for _, grp := range groups {
-		if grp.Syncable() {
-			name := fmt.Sprintf("%s org %s layout", grp.Root.Name, short(grp.Name))
-			checks = append(checks, check{name, layout.Validate(grp)})
+	checks = append(checks, check{"linked accounts", linkedErr})
+
+	if linksErr == nil {
+		if groups, err := layout.Groups(roots, l.Sets()); err == nil {
+			for _, grp := range groups {
+				if grp.Syncable() {
+					name := fmt.Sprintf("%s · %s layout", grp.Root.Name, grp.Name)
+					checks = append(checks, check{name, layout.Validate(grp)})
+				}
+			}
 		}
 	}
 	return append(checks, check{"background job", jobCheck(ctx, p)})
+}
+
+// chatFoldersCheck passes when either root has at least one account folder.
+func chatFoldersCheck(roots []layout.Root) error {
+	for _, r := range roots {
+		folders, err := layout.AccountFolders(r)
+		if err != nil {
+			return err
+		}
+		if len(folders) > 0 {
+			return nil
+		}
+	}
+	return errors.New("no Code tab or Cowork account folders found")
 }
 
 func jobCheck(ctx context.Context, p paths.Paths) error {

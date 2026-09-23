@@ -57,38 +57,6 @@ func TestClassify(t *testing.T) {
 	}
 }
 
-func TestDiscoverGroupsAccountsByOrg(t *testing.T) {
-	t.Parallel()
-	dir := t.TempDir()
-	root := layout.Root{Name: "code", Dir: dir}
-	lonely := "0e0e0e0e-0000-4000-8000-000000000002"
-	testtree.Mkdir(t, filepath.Join(dir, testtree.AcctA, testtree.Org))
-	testtree.Mkdir(t, filepath.Join(dir, testtree.AcctB, testtree.Org))
-	testtree.Mkdir(t, filepath.Join(dir, testtree.AcctA, lonely))
-	testtree.Mkdir(t, filepath.Join(dir, "skills-plugin"))
-	testtree.Write(t, filepath.Join(dir, ".DS_Store"), "", testtree.T0)
-
-	groups, err := layout.Discover([]layout.Root{root})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(groups) != 2 {
-		t.Fatalf("got %d groups, want 2: %+v", len(groups), groups)
-	}
-	both, one := groups[0], groups[1]
-	wantBoth := []string{layout.Member(testtree.AcctA, testtree.Org), layout.Member(testtree.AcctB, testtree.Org)}
-	if both.Name != testtree.Org || !slices.Equal(both.Members, wantBoth) || !both.Syncable() {
-		t.Errorf("shared org group: %+v", both)
-	}
-	wantOne := []string{layout.Member(testtree.AcctA, lonely)}
-	if one.Name != lonely || !slices.Equal(one.Members, wantOne) || one.Syncable() {
-		t.Errorf("single-account group: %+v", one)
-	}
-	if got, want := both.Dir(layout.Member(testtree.AcctB, testtree.Org)), filepath.Join(dir, testtree.AcctB, testtree.Org); got != want {
-		t.Errorf("Dir = %q, want %q", got, want)
-	}
-}
-
 func TestGroupsHoldEveryOrgFolderOfLinkedAccounts(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()
@@ -136,15 +104,6 @@ func TestAccountFoldersMissingRootIsEmpty(t *testing.T) {
 	}
 }
 
-func TestDiscoverMissingRootIsEmpty(t *testing.T) {
-	t.Parallel()
-	root := layout.Root{Name: "code", Dir: filepath.Join(t.TempDir(), "missing")}
-	groups, err := layout.Discover([]layout.Root{root})
-	if err != nil || len(groups) != 0 {
-		t.Fatalf("got %v, %v; want no groups and no error", groups, err)
-	}
-}
-
 func TestDiscoverIgnoresSymlinksAndUppercase(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()
@@ -159,11 +118,15 @@ func TestDiscoverIgnoresSymlinksAndUppercase(t *testing.T) {
 	}
 	testtree.Mkdir(t, filepath.Join(dir, "CCCCCCCC-0000-4000-8000-00000000000C", testtree.Org))
 
-	groups, err := layout.Discover([]layout.Root{{Name: "code", Dir: dir}})
+	folders, err := layout.AccountFolders(layout.Root{Name: "code", Dir: dir})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(groups) != 0 {
-		t.Fatalf("got %+v, want symlinked and uppercase folders ignored", groups)
+	total := 0
+	for _, orgs := range folders {
+		total += len(orgs)
+	}
+	if total != 0 {
+		t.Fatalf("got %+v, want symlinked and uppercase folders ignored", folders)
 	}
 }

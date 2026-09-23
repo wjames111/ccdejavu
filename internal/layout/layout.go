@@ -85,39 +85,6 @@ func Classify(name string, isDir, chatDirs bool) (Kind, string) {
 	return Other, ""
 }
 
-// Discover lists every (root, org) group, sorted by org within each root.
-// A root that doesn't exist yields nothing.
-func Discover(roots []Root) ([]Group, error) {
-	var groups []Group
-	for _, r := range roots {
-		folders, err := AccountFolders(r)
-		if err != nil {
-			return nil, err
-		}
-		byOrg := map[string][]string{}
-		for a, orgs := range folders {
-			for _, o := range orgs {
-				byOrg[o] = append(byOrg[o], a)
-			}
-		}
-		orgs := make([]string, 0, len(byOrg))
-		for o := range byOrg {
-			orgs = append(orgs, o)
-		}
-		sort.Strings(orgs)
-		for _, o := range orgs {
-			accts := byOrg[o]
-			sort.Strings(accts)
-			members := make([]string, len(accts))
-			for i, a := range accts {
-				members[i] = Member(a, o)
-			}
-			groups = append(groups, Group{Root: r, Name: o, Members: members})
-		}
-	}
-	return groups, nil
-}
-
 // AccountFolders maps each account under a root to its org folders. A missing root yields nothing.
 func AccountFolders(r Root) (map[string][]string, error) {
 	accounts, err := uuidDirs(r.Dir)

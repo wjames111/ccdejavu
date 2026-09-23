@@ -10,6 +10,8 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+
+	"github.com/wjames111/ccdejavu/internal/layout"
 )
 
 // Account is one linked account: the email the user typed and the app's account ID.
@@ -149,6 +151,22 @@ func Save(path string, l Links) error {
 		return err
 	}
 	return os.Rename(tmp.Name(), path)
+}
+
+// Sets turns linked groups into layout sets named by their emails.
+func (l *Links) Sets() []layout.Set {
+	out := make([]layout.Set, 0, len(l.Groups))
+	for _, g := range l.Groups {
+		var s layout.Set
+		var emails []string
+		for _, a := range g.Accounts {
+			s.Accounts = append(s.Accounts, a.ID)
+			emails = append(emails, a.Email)
+		}
+		s.Name = strings.Join(emails, " + ")
+		out = append(out, s)
+	}
+	return out
 }
 
 func normal(email string) string { return strings.ToLower(strings.TrimSpace(email)) }
