@@ -10,8 +10,8 @@ import (
 // Validate checks every chat file in the group before anything is copied, so
 // an app update that changes the format stops the sync instead of spreading.
 func Validate(g Group) error {
-	for _, a := range g.Accounts {
-		dir := g.OrgDir(a)
+	for _, m := range g.Members {
+		dir := g.Dir(m)
 		entries, err := os.ReadDir(dir)
 		if err != nil {
 			return err

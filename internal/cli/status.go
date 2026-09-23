@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strings"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -42,13 +43,14 @@ func newStatusCommand(g *globals) *cobra.Command {
 			fmt.Fprintf(w, "%-16s%s\n", "Backup:", orNone(st.Backup))
 			fmt.Fprintf(w, "%-16s%s\n", "Trash:", humanBytes(dirSize(p.Trash())))
 			for _, grp := range groups {
-				fmt.Fprintf(w, "\n%s org %s\n", grp.Root.Name, short(grp.Org))
-				for _, a := range grp.Accounts {
-					n, err := layout.CountChats(grp.OrgDir(a))
+				fmt.Fprintf(w, "\n%s org %s\n", grp.Root.Name, short(grp.Name))
+				for _, m := range grp.Members {
+					n, err := layout.CountChats(grp.Dir(m))
 					if err != nil {
 						return err
 					}
-					fmt.Fprintf(w, "  account %s  %s\n", short(a), plural(n, "chat"))
+					acct, org, _ := strings.Cut(m, "/")
+					fmt.Fprintf(w, "  account %s · org %s  %s\n", short(acct), short(org), plural(n, "chat"))
 				}
 				fmt.Fprintf(w, "  %s\n", groupResult(p, grp, st))
 			}
@@ -86,10 +88,7 @@ func groupResult(p paths.Paths, grp layout.Group, st state.State) string {
 		return "only one account here, nothing to sync"
 	}
 	for _, r := range st.Groups {
-		if r.Root == grp.Root.Name && r.Org == grp.Org {
-			if !slices.Equal(r.Accounts, grp.Accounts) {
-				return "an account was added since the last sync; it syncs on the next pass"
-			}
+		if r.Root == grp.Root.Name && slices.Equal(r.Members, grp.Members) {
 			if r.Skipped != "" && r.Actions > 0 {
 				return fmt.Sprintf("partly synced last time (%s made): %s", plural(r.Actions, "change"), p.Brief(r.Skipped))
 			}
@@ -97,6 +96,9 @@ func groupResult(p paths.Paths, grp layout.Group, st state.State) string {
 				return "skipped last sync: " + p.Brief(r.Skipped)
 			}
 			return fmt.Sprintf("in sync (last sync made %s)", plural(r.Actions, "change"))
+		}
+		if r.Root == grp.Root.Name && r.Name == grp.Name {
+			return "a folder was added since the last sync; it syncs on the next pass"
 		}
 	}
 	return "not synced yet"

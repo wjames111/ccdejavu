@@ -48,7 +48,7 @@ func TestSyncDryRunPrintsThePlan(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	expectAll(t, out, "Would back up", "copy ", "code org 0e0e0e0e: 1 planned change across 2 accounts")
+	expectAll(t, out, "Would back up", "copy ", "code org 0e0e0e0e: 1 planned change across 2 folders")
 }
 
 func TestSyncThenStatus(t *testing.T) {
@@ -58,15 +58,15 @@ func TestSyncThenStatus(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	expectAll(t, out, "code org 0e0e0e0e: 1 change across 2 accounts")
+	expectAll(t, out, "code org 0e0e0e0e: 1 change across 2 folders")
 
 	out, err = runCLI(t, "--home", home, "status")
 	if err != nil {
 		t.Fatal(err)
 	}
 	expectAll(t, out,
-		"account aaaaaaaa  1 chat",
-		"account bbbbbbbb  1 chat",
+		"account aaaaaaaa · org 0e0e0e0e  1 chat",
+		"account bbbbbbbb · org 0e0e0e0e  1 chat",
 		"in sync (last sync made 1 change)",
 		fmt.Sprintf("%-16s%s", "Background job:", "not installed"),
 	)

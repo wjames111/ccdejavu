@@ -13,10 +13,11 @@ import (
 func TestGroupResult(t *testing.T) {
 	t.Parallel()
 	p := paths.Paths{Home: "/h"}
+	memberA, memberB := layout.Member(testtree.AcctA, testtree.Org), layout.Member(testtree.AcctB, testtree.Org)
 	grp := layout.Group{
-		Root:     layout.Root{Name: "code"},
-		Org:      testtree.Org,
-		Accounts: []string{testtree.AcctA, testtree.AcctB},
+		Root:    layout.Root{Name: "code"},
+		Name:    testtree.Org,
+		Members: []string{memberA, memberB},
 	}
 	cases := []struct {
 		name    string
@@ -27,7 +28,7 @@ func TestGroupResult(t *testing.T) {
 	}{
 		{
 			name: "only one account",
-			grp:  layout.Group{Root: grp.Root, Org: testtree.Org, Accounts: []string{testtree.AcctA}},
+			grp:  layout.Group{Root: grp.Root, Name: testtree.Org, Members: []string{memberA}},
 			st:   state.State{},
 			want: "only one account here, nothing to sync",
 		},
@@ -41,7 +42,7 @@ func TestGroupResult(t *testing.T) {
 			name: "same accounts, no skip",
 			grp:  grp,
 			st: state.State{Groups: []state.Group{
-				{Root: "code", Org: testtree.Org, Accounts: []string{testtree.AcctA, testtree.AcctB}, Actions: 2},
+				{Root: "code", Name: testtree.Org, Members: []string{memberA, memberB}, Actions: 2},
 			}},
 			want: "in sync (last sync made 2 changes)",
 		},
@@ -49,15 +50,15 @@ func TestGroupResult(t *testing.T) {
 			name: "accounts differ",
 			grp:  grp,
 			st: state.State{Groups: []state.Group{
-				{Root: "code", Org: testtree.Org, Accounts: []string{testtree.AcctA}, Actions: 2},
+				{Root: "code", Name: testtree.Org, Members: []string{memberA}, Actions: 2},
 			}},
-			hasWant: "an account was added",
+			hasWant: "a folder was added",
 		},
 		{
 			name: "skipped, no actions",
 			grp:  grp,
 			st: state.State{Groups: []state.Group{
-				{Root: "code", Org: testtree.Org, Accounts: []string{testtree.AcctA, testtree.AcctB}, Skipped: "boom"},
+				{Root: "code", Name: testtree.Org, Members: []string{memberA, memberB}, Skipped: "boom"},
 			}},
 			hasWant: "skipped last sync:",
 		},
@@ -65,7 +66,7 @@ func TestGroupResult(t *testing.T) {
 			name: "skipped, partial",
 			grp:  grp,
 			st: state.State{Groups: []state.Group{
-				{Root: "code", Org: testtree.Org, Accounts: []string{testtree.AcctA, testtree.AcctB}, Actions: 3, Skipped: "boom"},
+				{Root: "code", Name: testtree.Org, Members: []string{memberA, memberB}, Actions: 3, Skipped: "boom"},
 			}},
 			hasWant: "partly synced last time (3 changes made)",
 		},

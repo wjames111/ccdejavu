@@ -104,14 +104,16 @@ func addWatches(w *fsnotify.Watcher, p paths.Paths, log *slog.Logger) {
 	var dirs []string
 	for _, r := range roots {
 		dirs = append(dirs, r.Dir)
-	}
-	groups, err := layout.Discover(roots)
-	if err != nil {
-		log.Warn("discover failed", "err", err)
-	}
-	for _, g := range groups {
-		for _, a := range g.Accounts {
-			dirs = append(dirs, filepath.Join(g.Root.Dir, a), g.OrgDir(a))
+		folders, err := layout.AccountFolders(r)
+		if err != nil {
+			log.Warn("account folders failed", "root", r.Name, "err", err)
+			continue
+		}
+		for a, orgs := range folders {
+			dirs = append(dirs, filepath.Join(r.Dir, a))
+			for _, o := range orgs {
+				dirs = append(dirs, filepath.Join(r.Dir, a, o))
+			}
 		}
 	}
 	for _, d := range dirs {

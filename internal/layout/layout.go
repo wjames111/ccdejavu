@@ -29,20 +29,21 @@ func Roots(p paths.Paths) []Root {
 	}
 }
 
-// Group is one org's folder under one root, across every account that has it.
+// Group is a set of chat folders under one root that are kept matched.
 type Group struct {
-	Root     Root
-	Org      string
-	Accounts []string // sorted
+	Root    Root
+	Name    string   // what messages call the group
+	Members []string // folders as "account/org" paths under Root.Dir, sorted
 }
 
-// OrgDir is the folder the app reads for this group when signed in as account.
-func (g Group) OrgDir(account string) string {
-	return filepath.Join(g.Root.Dir, account, g.Org)
-}
+// Member names one account's org folder inside a root.
+func Member(account, org string) string { return account + "/" + org }
 
-// Syncable reports whether there is more than one account to sync between.
-func (g Group) Syncable() bool { return len(g.Accounts) > 1 }
+// Dir is the absolute path of one member folder.
+func (g Group) Dir(member string) string { return filepath.Join(g.Root.Dir, member) }
+
+// Syncable reports whether there is more than one folder to sync between.
+func (g Group) Syncable() bool { return len(g.Members) > 1 }
 
 const uuidPattern = `[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}`
 
@@ -89,16 +90,12 @@ func Classify(name string, isDir, chatDirs bool) (Kind, string) {
 func Discover(roots []Root) ([]Group, error) {
 	var groups []Group
 	for _, r := range roots {
-		accounts, err := uuidDirs(r.Dir)
+		folders, err := AccountFolders(r)
 		if err != nil {
 			return nil, err
 		}
 		byOrg := map[string][]string{}
-		for _, a := range accounts {
-			orgs, err := uuidDirs(filepath.Join(r.Dir, a))
-			if err != nil {
-				return nil, err
-			}
+		for a, orgs := range folders {
 			for _, o := range orgs {
 				byOrg[o] = append(byOrg[o], a)
 			}
@@ -111,7 +108,59 @@ func Discover(roots []Root) ([]Group, error) {
 		for _, o := range orgs {
 			accts := byOrg[o]
 			sort.Strings(accts)
-			groups = append(groups, Group{Root: r, Org: o, Accounts: accts})
+			members := make([]string, len(accts))
+			for i, a := range accts {
+				members[i] = Member(a, o)
+			}
+			groups = append(groups, Group{Root: r, Name: o, Members: members})
+		}
+	}
+	return groups, nil
+}
+
+// AccountFolders maps each account under a root to its org folders. A missing root yields nothing.
+func AccountFolders(r Root) (map[string][]string, error) {
+	accounts, err := uuidDirs(r.Dir)
+	if err != nil {
+		return nil, err
+	}
+	out := map[string][]string{}
+	for _, a := range accounts {
+		orgs, err := uuidDirs(filepath.Join(r.Dir, a))
+		if err != nil {
+			return nil, err
+		}
+		out[a] = orgs
+	}
+	return out, nil
+}
+
+// Set is a named list of accounts whose chats are kept matched.
+type Set struct {
+	Name     string
+	Accounts []string
+}
+
+// Groups builds one group per root per set, holding every org folder of every account in the set.
+func Groups(roots []Root, sets []Set) ([]Group, error) {
+	var groups []Group
+	for _, r := range roots {
+		folders, err := AccountFolders(r)
+		if err != nil {
+			return nil, err
+		}
+		for _, s := range sets {
+			var members []string
+			for _, a := range s.Accounts {
+				for _, o := range folders[a] {
+					members = append(members, Member(a, o))
+				}
+			}
+			if len(members) == 0 {
+				continue
+			}
+			sort.Strings(members)
+			groups = append(groups, Group{Root: r, Name: s.Name, Members: members})
 		}
 	}
 	return groups, nil

@@ -70,7 +70,7 @@ func Run(opts Options) (state.State, error) {
 	trashRoot := filepath.Join(p.Trash(), stamp)
 	st.Groups = nil
 	for _, g := range groups {
-		rec := state.Group{Root: g.Root.Name, Org: g.Org, Accounts: g.Accounts}
+		rec := state.Group{Root: g.Root.Name, Name: g.Name, Members: g.Members}
 		if g.Syncable() {
 			n, err := syncGroup(g, trashRoot, opts)
 			rec.Actions = n

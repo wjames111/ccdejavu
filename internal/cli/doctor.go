@@ -62,7 +62,7 @@ func runChecks(ctx context.Context, p paths.Paths) []check {
 	checks = append(checks, check{"chat folders", err})
 	for _, grp := range groups {
 		if grp.Syncable() {
-			name := fmt.Sprintf("%s org %s layout", grp.Root.Name, short(grp.Org))
+			name := fmt.Sprintf("%s org %s layout", grp.Root.Name, short(grp.Name))
 			checks = append(checks, check{name, layout.Validate(grp)})
 		}
 	}

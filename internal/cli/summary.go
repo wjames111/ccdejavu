@@ -15,19 +15,19 @@ func printSummary(w io.Writer, p paths.Paths, st state.State, dryRun bool) {
 		noun = "planned change"
 	}
 	for _, g := range st.Groups {
-		if len(g.Accounts) < 2 {
+		if len(g.Members) < 2 {
 			continue
 		}
 		if g.Skipped != "" && g.Actions > 0 {
 			fmt.Fprintf(w, "%s org %s: partly synced (%s made, then stopped): %s\n",
-				g.Root, short(g.Org), plural(g.Actions, "change"), p.Brief(g.Skipped))
+				g.Root, short(g.Name), plural(g.Actions, "change"), p.Brief(g.Skipped))
 			continue
 		}
 		if g.Skipped != "" {
-			fmt.Fprintf(w, "%s org %s: skipped (%s)\n", g.Root, short(g.Org), p.Brief(g.Skipped))
+			fmt.Fprintf(w, "%s org %s: skipped (%s)\n", g.Root, short(g.Name), p.Brief(g.Skipped))
 			continue
 		}
-		fmt.Fprintf(w, "%s org %s: %s across %d accounts\n", g.Root, short(g.Org), plural(g.Actions, noun), len(g.Accounts))
+		fmt.Fprintf(w, "%s org %s: %s across %d folders\n", g.Root, short(g.Name), plural(g.Actions, noun), len(g.Members))
 	}
 }
 
