@@ -57,17 +57,19 @@ func CopyFile(src, dst string) error {
 	}
 	name := tmp.Name()
 	defer os.Remove(name)
-
-	if _, err := io.Copy(tmp, in); err != nil {
-		tmp.Close()
-		return err
-	}
-	if err := tmp.Sync(); err != nil {
-		tmp.Close()
-		return err
-	}
+	// A clone needs its target not to exist, so only the unique name is kept.
 	if err := tmp.Close(); err != nil {
 		return err
+	}
+	if err := os.Remove(name); err != nil {
+		return err
+	}
+
+	// Not every volume can clone, and a full copy is always good enough.
+	if err := clone(in, name); err != nil {
+		if err := copyTo(in, name); err != nil {
+			return err
+		}
 	}
 	if err := os.Chmod(name, info.Mode().Perm()); err != nil {
 		return err
@@ -79,6 +81,22 @@ func CopyFile(src, dst string) error {
 		return nil
 	}
 	return os.Rename(name, dst)
+}
+
+func copyTo(in *os.File, name string) error {
+	out, err := os.OpenFile(name, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
+	if err != nil {
+		return err
+	}
+	if _, err := io.Copy(out, in); err != nil {
+		out.Close()
+		return err
+	}
+	if err := out.Sync(); err != nil {
+		out.Close()
+		return err
+	}
+	return out.Close()
 }
 
 func moveToTrash(src, dst string) error {
