@@ -88,6 +88,10 @@ Linked accounts share one combined chat list across all their orgs: every org fo
 - Scheduled tasks stay per account.
 - The app's folder layout isn't a public API. An app update could change it; ccdejavu is built to stop, not guess, when that happens.
 
+## Disk space
+
+Copies and backups are APFS clones, so they share disk space with the original until one of them changes. `du` and Finder count each clone at full size, so they overstate what's really used. On a volume that can't clone, ccdejavu falls back to full copies.
+
 ## Upgrading
 
 ```sh
