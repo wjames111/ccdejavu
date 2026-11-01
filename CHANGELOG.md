@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.0](https://github.com/wjames111/ccdejavu/compare/v0.2.0...v0.3.0) (2026-11-01)
+
+
+### Features
+
+* copy and back up with APFS clones ([#4](https://github.com/wjames111/ccdejavu/issues/4)) ([f7a2762](https://github.com/wjames111/ccdejavu/commit/f7a27625d122a37bd8d64bf170a15df66e6ef4ad))
+
 ## [0.2.0](https://github.com/wjames111/ccdejavu/compare/v0.1.0...v0.2.0) (2026-09-23)
 
 
